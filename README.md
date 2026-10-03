@@ -1,6 +1,6 @@
 # linux-computer-use
 
-[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![License](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE)
+[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![License](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Downloads](https://img.shields.io/github/downloads/flyingsquirrel0419/linux-computer-use/total)](https://github.com/flyingsquirrel0419/linux-computer-use/releases)
 
 **English** | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
