@@ -56,6 +56,18 @@ git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/l
 `install.sh`는 venv 생성(시스템 PyGObject 사용) → Claude Code·Codex에 MCP 서버 등록 → 스킬을
 `~/.claude/skills`, `~/.codex/skills`에 심링크한다. 다시 실행해도 안전하다.
 
+## 자동 재시작 (supervisor)
+Claude Code·Codex는 MCP 서버 프로세스가 끝나면 다시 연결하지 않아서, 서버가 죽으면 그 세션에서 도구가 사라진다.
+그래서 등록은 `lcu-supervised`로 한다. 이 작은 감시 프로세스가 실제 서버(`python -m lcu.server`)를 자식으로 실행하고 메시지를 중계한다.
+
+- 자식이 죽거나 종료하면 바로 다시 띄우고, 클라이언트가 처음 보낸 `initialize`/`initialized`를 다시 보내 세션을 복구한다.
+  클라이언트 입장에서는 연결이 끊기지 않는다.
+- 죽는 순간 처리 중이던 요청에는 `-32000 "...server restarted...; please retry"` 오류를 돌려준다. 클릭 같은 동작이
+  두 번 실행되지 않도록 자동 재시도는 하지 않는다. 재시작 중에 들어온 요청은 대기열에 두었다가 이어서 보낸다.
+- 60초 안에 3번 넘게 죽으면 재시작 간격을 0.25초부터 두 배씩 늘린다(최대 10초).
+- 클라이언트가 연결을 닫거나 감시 프로세스에 종료 신호가 오면, 자식을 정리하고(가상 포인터 제거) 같이 끝난다.
+- 재시작 기록은 stderr에 남는다. `LCU_SUPERVISOR_LOG=/path`로 파일에 남길 수도 있다.
+
 ## 스킬
 [`skills/linux-computer-use/SKILL.md`](skills/linux-computer-use/SKILL.md)는 Anthropic computer use 방식의 작업 지침이다:
 보기 → 찾기(접근성 트리 우선) → 한 동작 → 검증 루프, 좌표 규칙, 입력 전 포커스 확인, 대기, 막혔을 때 대처,
@@ -71,13 +83,13 @@ uv sync
 ## 등록
 Claude Code:
 ```bash
-claude mcp add -s user linux-cu -- uv --directory /home/flyingsquirrel/Documents/linux-computer-use run lcu
+claude mcp add -s user linux-cu -- uv --directory /home/flyingsquirrel/Documents/linux-computer-use run lcu-supervised
 ```
 Codex (`~/.codex/config.toml`):
 ```toml
 [mcp_servers.linux-cu]
 command = "uv"
-args = ["--directory", "/home/flyingsquirrel/Documents/linux-computer-use", "run", "lcu"]
+args = ["--directory", "/home/flyingsquirrel/Documents/linux-computer-use", "run", "lcu-supervised"]
 startup_timeout_sec = 30
 tool_timeout_sec = 120
 default_tools_approval_mode = "approve"   # 매 호출 승인 생략 (codex exec에선 필수)

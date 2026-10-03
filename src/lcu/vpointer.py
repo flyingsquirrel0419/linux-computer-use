@@ -23,6 +23,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 
 from Xlib import X
 
@@ -88,6 +89,13 @@ def enable() -> bool:
             r = _xinput("create-master", NAME)
             if r.returncode != 0:
                 raise RuntimeError(r.stderr.strip() or "create-master failed")
+            # the hierarchy change is asynchronous: set-cp right away can fail
+            # with "unable to find device"
+            deadline = time.monotonic() + 3
+            while f"{NAME} pointer" not in _masters():
+                if time.monotonic() > deadline:
+                    raise RuntimeError("new master pointer did not appear")
+                time.sleep(0.05)
         # ClientPointer is set per X client; `xinput set-cp` finds the client
         # through a window it owns, so give our connection a tiny window.
         with display.lock():

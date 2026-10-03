@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 lcu = "lcu.server:main"
+lcu-supervised = "lcu.supervisor:main"
 
 [build-system]
 requires = ["hatchling"]
