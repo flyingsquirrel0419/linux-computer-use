@@ -15,14 +15,16 @@ from . import capture, cursor, display, input as inp, vpointer  # noqa: E402
 INSTRUCTIONS = """\
 Controls the user's Linux X11 desktop.
 
-You have your own mouse pointer and keyboard (a second X pointer, shown as
-a labelled cursor). The user's mouse and keyboard focus are untouched, so they
-can keep working. Your keystrokes go to the window under YOUR pointer: click
-the field you want first and keep the pointer there while typing.
+You normally have your own mouse pointer and keyboard (a second X pointer,
+drawn as a small glassy arrow); `screen_info` reports `virtual_pointer`. The
+user's mouse and keyboard focus are untouched, so they can keep working.
+Your keystrokes go to the window under YOUR pointer: click the field you want
+first and keep the pointer there while typing.
 
 Coordinates: every x/y you send or receive is in the pixel space of the image
 returned by `screenshot` (full screen, possibly downscaled). Never rescale them
-yourself. The red cross in screenshots is the mouse pointer.
+yourself. Your pointer appears in screenshots as that arrow, whose hotspot is
+its centre (or as a red cross when the overlay is off).
 
 Workflow: screenshot -> act -> verify. Action tools accept `screenshot_after`
 to return a fresh screenshot in the same call; prefer that over a separate
@@ -54,8 +56,9 @@ def _agent() -> None:
     if _agent_ready:
         return
     _agent_ready = True
-    vpointer.enable()
-    if cursor.start(cursor.label_for(_client_name())):
+    # The overlay mirrors the agent's pointer. Without an own pointer it would
+    # sit frozen while the user moves their mouse, so it needs the MPX pair.
+    if vpointer.enable() and cursor.start(cursor.label_for(_client_name())):
         inp.on_move = cursor.pos
         inp.on_button = cursor.button
         cursor.pos(*inp.position())
@@ -85,6 +88,7 @@ def screenshot(x: int | None = None, y: int | None = None,
     """Capture the screen. Optionally pass x/y/width/height (screenshot coords)
     to zoom into a region for reading small text; coordinates you act on must
     still be full-screen screenshot coordinates."""
+    _agent()  # so the pointer shown is the one you will act with
     region = None
     if None not in (x, y, width, height):
         region = (x, y, width, height)
@@ -94,6 +98,7 @@ def screenshot(x: int | None = None, y: int | None = None,
 @mcp.tool()
 def screen_info() -> str:
     """Screen size (real and screenshot space), scale, and pointer position."""
+    _agent()
     rw, rh = display.real_size()
     sw, sh = display.shot_size()
     px, py = display.to_shot(*inp.position())
@@ -138,6 +143,7 @@ def _check_focus(expect_window: str | None) -> str | None:
 @mcp.tool()
 def cursor_position() -> str:
     """Current mouse pointer position in screenshot coordinates."""
+    _agent()
     x, y = display.to_shot(*inp.position())
     return json.dumps({"x": x, "y": y})
 
@@ -159,7 +165,7 @@ def click(x: int, y: int, button: Button = "left", count: int = 1,
 def mouse_move(x: int, y: int, screenshot_after: bool = False):
     """Move the pointer to (x, y) without clicking (e.g. to reveal hover menus)."""
     _agent()
-    inp.move(*display.to_real(x, y))
+    inp.glide(*display.to_real(x, y))
     return _result(f"moved to ({x},{y})", screenshot_after)
 
 
@@ -267,6 +273,7 @@ def click_element(id: int, method: Literal["auto", "action", "mouse"] = "auto",
     a = _a11y()
     _agent()
     if method in ("auto", "action"):
+        _point_at(a, id)  # so follow-up keystrokes reach this element's window
         done = a.do_action(id)
         if done:
             return _result(f"element {id}: action '{done}'", screenshot_after)
@@ -277,16 +284,32 @@ def click_element(id: int, method: Literal["auto", "action", "mouse"] = "auto",
     return _result(f"element {id}: clicked at {display.to_shot(rx, ry)}", screenshot_after)
 
 
+def _point_at(a, eid: int) -> None:
+    """Glide the agent pointer onto an element (no click) when we own one."""
+    if not vpointer.active():
+        return
+    try:
+        inp.glide(*a.center(eid))
+    except RuntimeError:
+        pass
+
+
 @mcp.tool()
 def set_text(id: int, text: str, screenshot_after: bool = False):
     """Replace the contents of an editable ui_tree element. Falls back to
     focusing it, select-all and typing when the widget isn't directly editable."""
     a = _a11y()
     _agent()
+    _point_at(a, id)
     if a.set_text(id, text):
         return _result(f"element {id}: text set", screenshot_after)
-    if not a.focus(id):
-        inp.click(*a.center(id))
+    # With an own pointer, keys go to the window under it: AT-SPI focus alone
+    # would leave ctrl+a + typing aimed at whatever the pointer is over.
+    if vpointer.active() or not a.focus(id):
+        try:
+            inp.click(*a.center(id))
+        except RuntimeError:
+            return f"element {id} has no on-screen position; nothing typed"
     time.sleep(0.1)
     inp.press_combo("ctrl+a")
     inp.type_text(text)

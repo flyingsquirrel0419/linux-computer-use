@@ -66,7 +66,8 @@ verify. Don't chain long blind sequences.
   `type_text`/`key`. The call then refuses to send if the target is wrong.
   A newline in `type_text` presses Return and can submit a form or chat.
 - To replace a field's contents, use `set_text(id, ...)`, or press
-  `key ctrl+a` and then type.
+  `key ctrl+a` and then type. `click_element` and `set_text` move your
+  pointer onto the element first, so keys you type next go to that window.
 - Korean and other non-ASCII text works directly. The server works around
   the ibus Hangul mode. Use `key` for chords: `ctrl+l`, `alt+F4`,
   `ctrl+shift+t`, `super`, `Return`, `Escape`, `Page_Down`.

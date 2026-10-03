@@ -103,8 +103,11 @@ def enable() -> bool:
         return False
     _state["active"] = True
     atexit.register(_cleanup)
-    for s in (signal.SIGTERM, signal.SIGHUP):
-        signal.signal(s, _on_signal)
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(sig, _on_signal)
+        except ValueError:  # not on the main thread: atexit still cleans up
+            pass
     return True
 
 
