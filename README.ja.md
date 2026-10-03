@@ -1,6 +1,6 @@
 # linux-computer-use
 
-[![リリース](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest)
+[![リリース](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![ライセンス](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE)
 
 [English](README.md) | [한국어](README.ko.md) | **日本語** | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
