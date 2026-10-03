@@ -16,6 +16,34 @@ Claude Code·Codex 등 MCP를 지원하는 에이전트가 **리눅스 X11 데�
 - 동작 툴은 `screenshot_after=true`로 결과 화면을 같은 호출에서 받을 수 있다.
 - 스크린샷의 빨간 십자가 마우스 포인터.
 
+## 가상 마우스 (에이전트 전용 포인터)
+Codex computer use처럼 에이전트가 **자기 마우스와 키보드**를 갖는다. X Input 2의 멀티 포인터(MPX)로
+`lcu-<pid>`라는 두 번째 포인터·키보드 쌍을 만들고, 서버의 모든 XTest 입력을 그쪽으로 보낸다.
+
+- 사용자 마우스는 움직이지 않고 키보드 포커스도 바뀌지 않는다. 에이전트가 일하는 동안 사용자도 계속 작업할 수 있다.
+- 에이전트 클릭은 창을 앞으로 올리거나 활성화하지 않는다. 키 입력은 **에이전트 포인터 아래 창**으로 간다.
+- 에이전트마다 포인터가 따로 생긴다. Claude Code와 Codex를 동시에 띄우면 커서도 두 개다. 서버가 끝나면 포인터를 지우고,
+  비정상 종료로 남은 포인터는 다음 실행 때 정리한다.
+- 화면에는 오버레이 커서가 그려진다. 곡선 경로로 부드럽게 이동하고, 에이전트가 생각하는 동안(대기 중) 살짝 흔들리고,
+  클릭하면 파문이 퍼진다. 색은 배경화면에서 추출하고, 옆에 에이전트 이름표(Claude/Codex)가 붙는다.
+  오버레이는 클릭을 통과시킨다.
+
+| 환경변수 | 기본값 | 설명 |
+|---|---|---|
+| `LCU_VIRTUAL_POINTER` | `1` | `0`이면 사용자 마우스를 같이 씀 |
+| `LCU_OVERLAY` | `1` | `0`이면 오버레이 커서 끔 |
+| `LCU_GLIDE` | `1` | `0`이면 곡선 이동 없이 즉시 이동 |
+| `LCU_CURSOR_COLOR` | 배경화면 | `#rrggbb` 고정 색 |
+| `LCU_CURSOR_LABEL` | 클라이언트 이름 | 이름표 문구, 빈 값이면 숨김 |
+| `LCU_CURSOR_ICON` | 내장 화살표 | 직접 만든 PNG/SVG 아이콘 |
+| `LCU_CURSOR_HOTSPOT` | `0,0` | 아이콘 안에서 클릭 지점(px) |
+| `LCU_CURSOR_SIZE` | `28` | 커스텀 아이콘 높이(px) |
+| `LCU_CURSOR_SCALE` | `1.35` | 내장 화살표 크기 |
+
+환경변수는 MCP 등록의 `env`에 넣는다. Codex는 `[mcp_servers.linux-cu.env]`, Claude Code는 `claude mcp add -e KEY=VAL ...`.
+`xinput` 패키지가 필요하며, 없으면 자동으로 공유 포인터 모드로 동작한다.
+한계: 에이전트는 화면에 보이는 창만 조작할 수 있다. 가려진 창은 클릭이 위쪽 창으로 간다.
+
 ## 설치 (한 번에)
 ```bash
 git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use

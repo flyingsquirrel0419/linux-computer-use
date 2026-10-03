@@ -7,6 +7,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UV="$(command -v uv || true)"
 [ -n "$UV" ] || { echo "uv not found: https://docs.astral.sh/uv/" >&2; exit 1; }
 
+command -v xinput >/dev/null || echo "!! xinput not found: virtual mouse disabled (sudo apt install xinput)"
+
 echo "==> venv (system site-packages for PyGObject/AT-SPI)"
 if [ ! -d "$ROOT/.venv" ]; then
   "$UV" venv --directory "$ROOT" --python /usr/bin/python3 --system-site-packages -q

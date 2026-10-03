@@ -5,7 +5,7 @@ import io
 import mss
 from PIL import Image, ImageDraw
 
-from . import display
+from . import cursor, display
 
 
 def _pointer_real() -> tuple[int, int]:
@@ -26,7 +26,7 @@ def grab(region: tuple[int, int, int, int] | None = None, draw_cursor: bool = Tr
         raw = sct.grab(mon)
     img = Image.frombytes("RGB", raw.size, raw.bgra, "raw", "BGRX")
 
-    if draw_cursor:
+    if draw_cursor and not cursor.running():  # the overlay is already on screen
         # mss does not include the pointer; draw a small marker so the model
         # can see where the mouse is.
         cx, cy = _pointer_real()

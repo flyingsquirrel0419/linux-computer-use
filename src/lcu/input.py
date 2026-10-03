@@ -4,6 +4,9 @@ All public functions take *real* screen pixels; server.py converts from
 screenshot space before calling in.
 """
 
+import math
+import os
+import random
 import time
 from contextlib import contextmanager
 
@@ -28,12 +31,56 @@ def _flush():
     _d().sync()
 
 
+def _kmd():
+    # keymap edits go to the user's core keyboard map, which is what toolkits
+    # consult even for keys coming from the agent's own keyboard
+    return display.get_core_display()
+
+
+# Hooks set by server.py to drive the cursor overlay (real screen pixels).
+on_move = None    # (x, y) -> None
+on_button = None  # (button_name, down: bool) -> None
+
+GLIDE = os.environ.get("LCU_GLIDE", "1") != "0"
+
+
 # --------------------------------------------------------------------- mouse
 
 def move(x: int, y: int) -> None:
+    """Jump the pointer to (x, y)."""
     with display.lock():
         xtest.fake_input(_d(), X.MotionNotify, x=x, y=y)
         _flush()
+    if on_move:
+        on_move(x, y)
+
+
+def glide(x: int, y: int) -> None:
+    """Move along a gentle curve with ease-in-out, like a hand would.
+
+    Hover effects along the way fire naturally, and the overlay cursor
+    follows every step. LCU_GLIDE=0 makes this a plain jump.
+    """
+    x0, y0 = position()
+    dist = math.hypot(x - x0, y - y0)
+    if not GLIDE or dist < 4:
+        move(x, y)
+        return
+    duration = min(0.55, 0.14 + dist / 2600)
+    steps = max(6, int(duration * 90))
+    # control point: midpoint pushed sideways by up to 18% of the distance
+    bend = random.uniform(0.06, 0.18) * random.choice((-1, 1)) * dist
+    mx, my = (x0 + x) / 2, (y0 + y) / 2
+    nx, ny = -(y - y0) / dist, (x - x0) / dist
+    cx, cy = mx + nx * bend, my + ny * bend
+    for i in range(1, steps + 1):
+        t = i / steps
+        t = t * t * (3 - 2 * t)  # smoothstep
+        px = (1 - t) ** 2 * x0 + 2 * (1 - t) * t * cx + t * t * x
+        py = (1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t * t * y
+        move(round(px), round(py))
+        time.sleep(duration / steps)
+    move(x, y)
 
 
 def position() -> tuple[int, int]:
@@ -42,15 +89,20 @@ def position() -> tuple[int, int]:
         return p.root_x, p.root_y
 
 
+_BUTTON_NAMES = {v: k for k, v in BUTTONS.items()}
+
+
 def button(btn: int, down: bool) -> None:
     with display.lock():
         xtest.fake_input(_d(), X.ButtonPress if down else X.ButtonRelease, btn)
         _flush()
+    if on_button and btn in _BUTTON_NAMES:
+        on_button(_BUTTON_NAMES[btn], down)
 
 
 def click(x: int, y: int, btn: str = "left", count: int = 1, modifiers: list[str] | None = None) -> None:
     code = BUTTONS[btn]
-    move(x, y)
+    glide(x, y)
     time.sleep(0.03)
     with hold(modifiers or []):
         for i in range(count):
@@ -63,7 +115,7 @@ def click(x: int, y: int, btn: str = "left", count: int = 1, modifiers: list[str
 
 def drag(x1: int, y1: int, x2: int, y2: int, btn: str = "left", steps: int = 20) -> None:
     code = BUTTONS[btn]
-    move(x1, y1)
+    glide(x1, y1)
     time.sleep(0.05)
     button(code, True)
     time.sleep(0.05)
@@ -76,7 +128,7 @@ def drag(x1: int, y1: int, x2: int, y2: int, btn: str = "left", steps: int = 20)
 
 def scroll(x: int, y: int, direction: str, amount: int = 3, modifiers: list[str] | None = None) -> None:
     code = SCROLL_BUTTONS[direction]
-    move(x, y)
+    glide(x, y)
     time.sleep(0.02)
     with hold(modifiers or []):
         for _ in range(amount):
@@ -109,7 +161,7 @@ class _Keymap:
         return best
 
     def _find_spare(self) -> int:
-        d = _d()
+        d = _kmd()
         first = d.display.info.min_keycode
         count = d.display.info.max_keycode - first + 1
         mapping = d.get_keyboard_mapping(first, count)
@@ -120,7 +172,7 @@ class _Keymap:
         raise RuntimeError("no spare keycode available for remapping")
 
     def borrow(self, ks: int) -> int:
-        d = _d()
+        d = _kmd()
         if self._spare is None:
             self._spare = self._find_spare()
         per = len(d.get_keyboard_mapping(self._spare, 1)[0])
@@ -132,7 +184,7 @@ class _Keymap:
 
     def restore(self):
         if self._dirty and self._spare is not None:
-            d = _d()
+            d = _kmd()
             per = len(d.get_keyboard_mapping(self._spare, 1)[0])
             d.change_keyboard_mapping(self._spare, [[0] * per])
             d.sync()

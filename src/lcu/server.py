@@ -10,10 +10,15 @@ from . import env
 
 env.ensure()  # before anything touches X11 or D-Bus
 
-from . import capture, display, input as inp  # noqa: E402
+from . import capture, cursor, display, input as inp, vpointer  # noqa: E402
 
 INSTRUCTIONS = """\
 Controls the user's Linux X11 desktop.
+
+You have your own mouse pointer and keyboard (a second X pointer, shown as
+a labelled cursor). The user's mouse and keyboard focus are untouched, so they
+can keep working. Your keystrokes go to the window under YOUR pointer: click
+the field you want first and keep the pointer there while typing.
 
 Coordinates: every x/y you send or receive is in the pixel space of the image
 returned by `screenshot` (full screen, possibly downscaled). Never rescale them
@@ -23,7 +28,7 @@ Workflow: screenshot -> act -> verify. Action tools accept `screenshot_after`
 to return a fresh screenshot in the same call; prefer that over a separate
 screenshot call. For native apps, `ui_tree` lists widgets with their center
 coordinates and ids; `click_element`/`set_text` act on them directly and are
-more reliable than pixel guessing. Before typing, confirm focus with
+more reliable than pixel guessing. Before typing, confirm the target with
 `active_window` or pass `expect_window` to `type_text`/`key`. Use `type_text` for text (any Unicode,
 including Korean) and `key` for shortcuts like "ctrl+l" or "Return".
 """
@@ -31,6 +36,29 @@ including Korean) and `key` for shortcuts like "ctrl+l" or "Return".
 mcp = FastMCP("linux-computer-use", instructions=INSTRUCTIONS)
 
 Button = Literal["left", "right", "middle", "back", "forward"]
+
+
+_agent_ready = False
+
+
+def _client_name() -> str | None:
+    try:
+        return mcp.get_context().session.client_params.clientInfo.name
+    except Exception:
+        return None
+
+
+def _agent() -> None:
+    """First input action: bring up the agent's pointer and its cursor."""
+    global _agent_ready
+    if _agent_ready:
+        return
+    _agent_ready = True
+    vpointer.enable()
+    if cursor.start(cursor.label_for(_client_name())):
+        inp.on_move = cursor.pos
+        inp.on_button = cursor.button
+        cursor.pos(*inp.position())
 
 
 def _a11y():
@@ -72,26 +100,39 @@ def screen_info() -> str:
     return json.dumps({
         "screenshot_size": [sw, sh], "real_size": [rw, rh],
         "scale": round(display.scale(), 4), "cursor": [px, py],
+        **vpointer.status(), "overlay": cursor.running(),
     })
 
 
 @mcp.tool()
 def active_window() -> str:
-    """The focused window: title, WM class, pid. Check this before typing so
-    keystrokes don't land in the wrong app."""
-    return json.dumps(display.active_window(), ensure_ascii=False)
+    """Where your keystrokes will go (`keys_go_to`: the window under your
+    pointer when you have your own pointer) and which window the user has
+    focused. Check this before typing."""
+    _agent()
+    return json.dumps({
+        "keys_go_to": _key_target(),
+        "user_focus": display.user_focus_window(),
+        "own_pointer": vpointer.active(),
+    }, ensure_ascii=False)
+
+
+def _key_target() -> dict:
+    return display.window_under_pointer() if vpointer.active() else display.user_focus_window()
 
 
 def _check_focus(expect_window: str | None) -> str | None:
-    """Return an error message if the focused window doesn't match."""
+    """Return an error message if the keystroke target doesn't match."""
+    _agent()
     if not expect_window:
         return None
-    w = display.active_window()
+    w = _key_target()
     hay = f"{w['title']} {w['class']}".lower()
     if expect_window.lower() in hay:
         return None
-    return (f"NOT SENT: focused window is {w['title']!r} ({w['class']}), "
-            f"expected {expect_window!r}. Focus the right window first.")
+    where = "under your pointer" if vpointer.active() else "focused"
+    return (f"NOT SENT: the window {where} is {w['title']!r} ({w['class']}), "
+            f"expected {expect_window!r}. Click into the right window first.")
 
 
 @mcp.tool()
@@ -108,6 +149,7 @@ def click(x: int, y: int, button: Button = "left", count: int = 1,
           modifiers: list[str] | None = None, screenshot_after: bool = False):
     """Click at (x, y). count=2 for double-click, 3 for triple-click.
     modifiers e.g. ["ctrl"] or ["shift"] are held during the click."""
+    _agent()
     rx, ry = display.to_real(x, y)
     inp.click(rx, ry, button, count, modifiers)
     return _result(f"clicked {button} x{count} at ({x},{y})", screenshot_after)
@@ -116,6 +158,7 @@ def click(x: int, y: int, button: Button = "left", count: int = 1,
 @mcp.tool()
 def mouse_move(x: int, y: int, screenshot_after: bool = False):
     """Move the pointer to (x, y) without clicking (e.g. to reveal hover menus)."""
+    _agent()
     inp.move(*display.to_real(x, y))
     return _result(f"moved to ({x},{y})", screenshot_after)
 
@@ -124,6 +167,7 @@ def mouse_move(x: int, y: int, screenshot_after: bool = False):
 def drag(start_x: int, start_y: int, end_x: int, end_y: int,
          button: Button = "left", screenshot_after: bool = False):
     """Press at start, move smoothly to end, release."""
+    _agent()
     inp.drag(*display.to_real(start_x, start_y), *display.to_real(end_x, end_y), btn=button)
     return _result(f"dragged ({start_x},{start_y}) -> ({end_x},{end_y})", screenshot_after)
 
@@ -131,6 +175,7 @@ def drag(start_x: int, start_y: int, end_x: int, end_y: int,
 @mcp.tool()
 def mouse_down(button: Button = "left") -> str:
     """Press and hold a mouse button at the current pointer position."""
+    _agent()
     inp.button(inp.BUTTONS[button], True)
     return f"{button} down"
 
@@ -138,6 +183,7 @@ def mouse_down(button: Button = "left") -> str:
 @mcp.tool()
 def mouse_up(button: Button = "left", screenshot_after: bool = False):
     """Release a mouse button."""
+    _agent()
     inp.button(inp.BUTTONS[button], False)
     return _result(f"{button} up", screenshot_after)
 
@@ -147,6 +193,7 @@ def scroll(x: int, y: int, direction: Literal["up", "down", "left", "right"] = "
            amount: int = 3, modifiers: list[str] | None = None,
            screenshot_after: bool = False):
     """Scroll the wheel at (x, y). amount = number of wheel clicks."""
+    _agent()
     inp.scroll(*display.to_real(x, y), direction, amount, modifiers)
     return _result(f"scrolled {direction} x{amount} at ({x},{y})", screenshot_after)
 
@@ -179,6 +226,7 @@ def key(combo: str, repeat: int = 1, expect_window: str | None = None,
 @mcp.tool()
 def hold_key(combo: str, seconds: float, screenshot_after: bool = False):
     """Hold key(s) down for `seconds` (max 10), e.g. for games or key repeat."""
+    _agent()
     with inp.hold([k for k in combo.split("+") if k]):
         time.sleep(min(max(seconds, 0), 10))
     return _result(f"held {combo} for {seconds}s", screenshot_after)
@@ -217,6 +265,7 @@ def click_element(id: int, method: Literal["auto", "action", "mouse"] = "auto",
     """Activate a ui_tree element. auto = AT-SPI action if available, else a
     real mouse click at its center."""
     a = _a11y()
+    _agent()
     if method in ("auto", "action"):
         done = a.do_action(id)
         if done:
@@ -233,6 +282,7 @@ def set_text(id: int, text: str, screenshot_after: bool = False):
     """Replace the contents of an editable ui_tree element. Falls back to
     focusing it, select-all and typing when the widget isn't directly editable."""
     a = _a11y()
+    _agent()
     if a.set_text(id, text):
         return _result(f"element {id}: text set", screenshot_after)
     if not a.focus(id):

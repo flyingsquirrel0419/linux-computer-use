@@ -35,22 +35,39 @@ verify. Don't chain long blind sequences.
 ## Coordinates
 - All x/y are in the screenshot image's pixel space. The server maps them to
   real pixels, so don't rescale them yourself.
-- The red cross in screenshots is the mouse pointer.
+- Your cursor is visible in screenshots: the coloured arrow with your name
+  (or a red cross when the overlay is off). The arrow's tip is the hotspot.
 - Small text: call `screenshot` with `x,y,width,height` to zoom in. You still
   click with full-screen coordinates.
 - Aim for the center of a target. For tiny targets (checkboxes, close
   buttons), zoom in first.
 
+## Your own pointer (virtual mouse)
+- You have your own mouse pointer and keyboard. They're a second X pointer,
+  drawn as a coloured cursor with your name on it. The user's mouse doesn't
+  move and their keyboard focus doesn't change, so they can keep working
+  while you act.
+- Your clicks hit whatever is visible under your pointer. They don't raise or
+  activate the window. You can only act on what's visible on screen, so if
+  your target is covered, ask the user, or bring it forward yourself
+  (`key super`, the app's own launcher, `wmctrl` if it's installed), knowing
+  that this changes what the user sees.
+- `screen_info` shows `virtual_pointer: true` when this mode is on. If it's
+  false (no `xinput`, or `LCU_VIRTUAL_POINTER=0`), you share the user's
+  mouse, so tell them before taking over.
+
 ## Typing safely
-- **Keystrokes go to whatever window has focus.** Before `type_text` or a
-  `key` that edits or submits, confirm focus with `active_window`, or pass
-  `expect_window="gedit"` (a substring of the title or WM class). The call
-  then refuses to send if focus is wrong. A newline in `type_text` presses
-  Return and can submit a form or a chat message.
-- Click the field first, then type. To replace a field's contents, use
-  `set_text(id, ...)`, or press `key ctrl+a` and then type.
+- **Your keystrokes go to the window under your pointer.** Click the field,
+  keep the pointer there, then type. If you moved the pointer away, click
+  the field again.
+- Confirm the target with `active_window` (`keys_go_to`), or pass
+  `expect_window="gedit"` (a substring of the title or WM class) to
+  `type_text`/`key`. The call then refuses to send if the target is wrong.
+  A newline in `type_text` presses Return and can submit a form or chat.
+- To replace a field's contents, use `set_text(id, ...)`, or press
+  `key ctrl+a` and then type.
 - Korean and other non-ASCII text works directly. The server works around
-  the ibus Hangul mode for you. Use `key` for chords: `ctrl+l`, `alt+F4`,
+  the ibus Hangul mode. Use `key` for chords: `ctrl+l`, `alt+F4`,
   `ctrl+shift+t`, `super`, `Return`, `Escape`, `Page_Down`.
 
 ## Waiting
