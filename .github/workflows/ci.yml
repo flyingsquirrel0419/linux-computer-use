@@ -60,5 +60,19 @@ jobs:
           uv venv --python /usr/bin/python3 --system-site-packages
           uv sync
 
+      - name: Check the venv uses the distro Python and PyGObject
+        run: |
+          dbus-run-session -- uv run --no-sync python - <<'EOF'
+          import sys
+          v = "%d.%d" % sys.version_info[:2]
+          assert v == "${{ matrix.python }}", f"venv runs Python {v}"
+          import gi
+          gi.require_version("Gtk", "3.0")
+          gi.require_version("Atspi", "2.0")
+          from gi.repository import Atspi, Gtk  # noqa: F401
+          import lcu.a11y, lcu.overlay  # noqa: F401
+          print("Python", sys.version.split()[0], "| PyGObject", gi.__version__)
+          EOF
+
       - name: Tests (Xvfb + openbox)
         run: dbus-run-session -- scripts/ci_x11.sh -v
