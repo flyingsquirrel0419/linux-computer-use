@@ -255,6 +255,7 @@ xinput remove-master "lcu-<pid> pointer"
 - El agente maneja tu **escritorio real**. Aparte de las pautas de la skill no hay protecciones integradas, y con `default_tools_approval_mode = "approve"` Codex llama a las herramientas sin preguntar.
 - Para aislar al agente, ejecuta el servidor en otra pantalla (por ejemplo, `Xvfb :99` con un gestor de ventanas) definiendo `DISPLAY=:99` en su entorno.
 - Las capturas de tu pantalla se envían al proveedor del modelo que use el agente.
+- Informa de las vulnerabilidades en privado; consulta [SECURITY.md](SECURITY.md).
 
 ## Desarrollo
 

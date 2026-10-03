@@ -255,6 +255,7 @@ xinput remove-master "lcu-<pid> pointer"
 - 智能体操作的是你的**真实桌面**。除了技能中的指引外没有内置的安全防护；设置 `default_tools_approval_mode = "approve"` 时，Codex 会不经询问直接调用工具。
 - 如需隔离智能体，可在服务器环境中设置 `DISPLAY=:99`，让它在单独的显示器上运行（例如带窗口管理器的 `Xvfb :99`）。
 - 你的屏幕截图会发送给智能体所用的模型提供方。
+- 请私下报告漏洞，详见 [SECURITY.md](SECURITY.md)。
 
 ## 开发
 

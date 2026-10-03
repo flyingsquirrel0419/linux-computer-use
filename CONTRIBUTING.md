@@ -6,7 +6,7 @@ Thanks for helping out. This guide covers how to get a working checkout, run the
 
 - **Questions, bugs and ideas:** use [GitHub Issues](https://github.com/flyingsquirrel0419/linux-computer-use/issues). Labels such as `bug`, `enhancement`, `question`, `documentation` and `accessibility` help with triage. If you want somewhere to start, look for [`good first issue`](https://github.com/flyingsquirrel0419/linux-computer-use/labels/good%20first%20issue) and [`help wanted`](https://github.com/flyingsquirrel0419/linux-computer-use/labels/help%20wanted).
 - **Bug reports:** include your distro and desktop (X11 session, window manager), the output of `screen_info`, the app you were driving, and what you expected to happen. Screenshots of your desktop can show private information, so crop or redact them before you post.
-- **Security problems:** don't put details in a public issue. This repository has no private reporting channel yet, so open an issue that only asks the maintainer for a private contact, and share the details there.
+- **Security problems:** don't open a public issue. Report them privately as described in [SECURITY.md](SECURITY.md).
 
 ## Development setup
 

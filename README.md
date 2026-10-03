@@ -252,6 +252,7 @@ xinput remove-master "lcu-<pid> pointer"
 - The agent operates your **real desktop**. Beyond the skill's guidance there are no built-in guardrails, and with `default_tools_approval_mode = "approve"` Codex calls the tools without asking.
 - To isolate the agent, run the server against a separate display (for example `Xvfb :99` with a window manager) by setting `DISPLAY=:99` in its environment.
 - Screenshots of your screen are sent to the model provider that the agent uses.
+- Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## Development
 
