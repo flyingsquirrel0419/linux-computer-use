@@ -135,19 +135,35 @@ def scroll(x: int, y: int, direction: str, amount: int = 3, modifiers: list[str]
 
 # ------------------------------------------------------------------ keyboard
 
+# How long clients get to pick up a keymap change before the first key that
+# depends on it. Some (ibus, Electron) refresh their keymap lazily; with too
+# short a wait the first remapped character is lost or typed with the stale
+# binding (e.g. "테스트" -> "홈스트").
+REMAP_SETTLE = float(os.environ.get("LCU_REMAP_SETTLE", "0.12"))
+
+
 class _Keymap:
-    """Resolves keysyms to keycodes, borrowing a spare keycode when needed.
+    """Resolves keysyms to keycodes, borrowing spare keycodes when needed.
 
     Characters missing from the active layout (Hangul, emoji, CJK...) are typed
     by temporarily binding their Unicode keysym to an unused keycode, the same
-    trick xdotool uses. The binding is removed afterwards.
+    trick xdotool uses. Bindings are made in batches, each keysym on its own
+    keycode, followed by one sync + settle wait, so clients see a single
+    MappingNotify per batch instead of one per character. They are removed
+    afterwards.
     """
 
     def __init__(self):
-        self._spare = None
-        self._dirty = False
+        self._spares: list[int] | None = None
+        self._bound: dict[int, int] = {}  # keysym -> borrowed keycode (current batch)
+        self._touched: set[int] = set()   # every keycode we changed, for restore()
 
     def lookup(self, ks: int) -> tuple[int, bool] | None:
+        if ks in self._bound:
+            return self._bound[ks], False
+        return self.in_layout(ks)
+
+    def in_layout(self, ks: int) -> tuple[int, bool] | None:
         best = None
         for code, index in _d().keysym_to_keycodes(ks):
             if index == 0:
@@ -156,35 +172,52 @@ class _Keymap:
                 best = (code, True)
         return best
 
-    def _find_spare(self) -> int:
+    def spares(self) -> list[int]:
+        if self._spares is None:
+            d = _kmd()
+            first = d.display.info.min_keycode
+            count = d.display.info.max_keycode - first + 1
+            mapping = d.get_keyboard_mapping(first, count)
+            # from the top: high keycodes are rarely bound to real keys
+            self._spares = [first + i for i in range(count - 1, -1, -1) if not any(mapping[i])]
+            if not self._spares:
+                raise RuntimeError("no spare keycode available for remapping")
+        return self._spares
+
+    def bind(self, keysyms: list[int]) -> None:
+        """Bind up to len(spares()) keysyms at once, then wait for clients."""
+        if not keysyms:
+            return
         d = _kmd()
-        first = d.display.info.min_keycode
-        count = d.display.info.max_keycode - first + 1
-        mapping = d.get_keyboard_mapping(first, count)
-        # search from the top: high keycodes are rarely bound to real keys
-        for i in range(count - 1, -1, -1):
-            if not any(mapping[i]):
-                return first + i
-        raise RuntimeError("no spare keycode available for remapping")
+        spares = self.spares()
+        if len(keysyms) > len(spares):
+            raise ValueError("more keysyms than spare keycodes")
+        self._bound = {}
+        for ks, code in zip(keysyms, spares):
+            per = len(d.get_keyboard_mapping(code, 1)[0])
+            d.change_keyboard_mapping(code, [[ks] * per])
+            self._bound[ks] = code
+            self._touched.add(code)
+        # round-trip on both connections: the server has applied the change
+        # and the agent connection is ordered after it
+        d.sync()
+        _d().sync()
+        time.sleep(REMAP_SETTLE)
 
     def borrow(self, ks: int) -> int:
-        d = _kmd()
-        if self._spare is None:
-            self._spare = self._find_spare()
-        per = len(d.get_keyboard_mapping(self._spare, 1)[0])
-        d.change_keyboard_mapping(self._spare, [[ks] * per])
-        d.sync()
-        self._dirty = True
-        time.sleep(0.03)  # let clients process MappingNotify before the key arrives
-        return self._spare
+        if ks not in self._bound:
+            self.bind([*self._bound, ks][-len(self.spares()):])
+        return self._bound[ks]
 
     def restore(self):
-        if self._dirty and self._spare is not None:
-            d = _kmd()
-            per = len(d.get_keyboard_mapping(self._spare, 1)[0])
-            d.change_keyboard_mapping(self._spare, [[0] * per])
-            d.sync()
-            self._dirty = False
+        if not self._touched:
+            return
+        d = _kmd()
+        for code in self._touched:
+            per = len(d.get_keyboard_mapping(code, 1)[0])
+            d.change_keyboard_mapping(code, [[0] * per])
+        d.sync()
+        self._bound, self._touched = {}, set()
 
 
 def _key_event(code: int, down: bool) -> None:
@@ -244,19 +277,43 @@ def press_combo(combo: str, repeat: int = 1) -> None:
             km.restore()
 
 
+def _segments(km: _Keymap, text: str):
+    """Split text so each piece needs no more borrowed keysyms than there are
+    spare keycodes. Yields (piece, keysyms_to_bind)."""
+    piece, need = [], []
+    limit = None
+    for ch in text:
+        ks = keys.char_keysym(ch)
+        if km.in_layout(ks) is None and ks not in need:
+            if limit is None:
+                limit = len(km.spares())
+            if len(need) == limit:
+                yield "".join(piece), need
+                piece, need = [], []
+            need.append(ks)
+        piece.append(ch)
+    if piece:
+        yield "".join(piece), need
+
+
 def type_text(text: str, delay: float = KEY_DELAY) -> None:
     with display.lock(), ime.plain_input():
         km = _Keymap()
         shift_code = km.lookup(_SHIFT)[0]
         try:
-            for ch in text:
-                code, need_shift = _resolve(km, keys.char_keysym(ch))
-                if need_shift:
-                    _key_event(shift_code, True)
-                _key_event(code, True)
-                _key_event(code, False)
-                if need_shift:
-                    _key_event(shift_code, False)
-                time.sleep(delay)
+            for piece, need in _segments(km, text):
+                km.bind(need)
+                for ch in piece:
+                    code, need_shift = km.lookup(keys.char_keysym(ch))
+                    if need_shift:
+                        _key_event(shift_code, True)
+                    _key_event(code, True)
+                    _key_event(code, False)
+                    if need_shift:
+                        _key_event(shift_code, False)
+                    time.sleep(delay)
+                # let the last remapped keys be processed before rebinding
+                if need:
+                    time.sleep(REMAP_SETTLE / 2)
         finally:
             km.restore()

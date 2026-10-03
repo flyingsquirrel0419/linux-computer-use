@@ -35,6 +35,7 @@ Codex computer use처럼 에이전트가 **자기 마우스와 키보드**를 �
 |---|---|---|
 | `LCU_VIRTUAL_POINTER` | `1` | `0`이면 사용자 마우스를 같이 씀 |
 | `LCU_OVERLAY` | `1` | `0`이면 오버레이 커서 끔 |
+| `LCU_REMAP_SETTLE` | `0.12` | 한글 등 리매핑 글자 입력 전 keymap 반영 대기(초). 첫 글자가 빠지거나 다른 글자로 나오면 늘림 |
 | `LCU_GLIDE` | `1` | `0`이면 곡선·스프링 이동 없이 즉시 이동 |
 | `LCU_CURSOR_COLOR` | 배경화면 | `#rrggbb` 고정 색 |
 | `LCU_CURSOR_LABEL` | 없음 | 이름표 문구, `auto`면 클라이언트 이름(Claude/Codex) |
