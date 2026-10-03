@@ -353,7 +353,7 @@ wheels = [
 
 [[package]]
 name = "linux-computer-use"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },

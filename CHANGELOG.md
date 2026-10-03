@@ -7,9 +7,17 @@ dates in UTC.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-03
+
 ### Changed
 
 - `install.sh` no longer turns on Codex auto-approval by default. New Codex registrations ask before each tool call. `--auto-approve` turns it on (needed for `codex exec`), `--no-auto-approve` turns it off. Without either option, an existing registration keeps its setting, and `install.sh` reports it. Registrations from 0.1.0–0.1.1 have auto-approval on: run `install.sh --no-auto-approve` to turn it off.
+
+### Added
+
+- `SECURITY.md` and GitHub private vulnerability reporting, so security issues can be reported privately.
+- `CONTRIBUTING.md` with the development setup, the CI checks, and the rule to run input-generating tests only on a throwaway display.
+- This changelog.
 
 ## [0.1.1] - 2026-10-03
 
@@ -47,6 +55,7 @@ First release.
 - A README in English, Korean, Japanese, Simplified Chinese and Spanish.
 - The Apache-2.0 license.
 
-[Unreleased]: https://github.com/flyingsquirrel0419/linux-computer-use/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/flyingsquirrel0419/linux-computer-use/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/flyingsquirrel0419/linux-computer-use/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/flyingsquirrel0419/linux-computer-use/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/flyingsquirrel0419/linux-computer-use/releases/tag/v0.1.0
