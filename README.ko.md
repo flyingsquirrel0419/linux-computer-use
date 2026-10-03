@@ -144,7 +144,7 @@ Claude Code와 Codex는 stdio MCP 서버를 한 번 띄우고 다시 연결하�
 /plugin install linux-computer-use@linux-computer-use
 ```
 
-플러그인에는 스킬만 들어 있습니다. MCP 서버는 `install.sh`로 설치하세요. 스킬이 중복되지 않도록 두 방법 중 하나만 쓰세요. 저장소가 비공개인 동안에는 마켓플레이스 추가에 GitHub 접근 권한(`gh auth login`)이 필요합니다.
+플러그인에는 스킬만 들어 있습니다. MCP 서버는 `install.sh`로 설치하세요. 스킬이 중복되지 않도록 두 방법 중 하나만 쓰세요.
 
 ## 설정
 

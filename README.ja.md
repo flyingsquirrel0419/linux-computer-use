@@ -144,7 +144,7 @@ Claude Code と Codex は stdio MCP サーバーを一度起動するだけで�
 /plugin install linux-computer-use@linux-computer-use
 ```
 
-プラグインに含まれるのはスキルだけです。MCP サーバーは `install.sh` で入れてください。スキルが重複しないよう、どちらか一方の方法だけを使ってください。リポジトリが非公開の間は、マーケットプレイスの追加に GitHub へのアクセス権(`gh auth login`)が必要です。
+プラグインに含まれるのはスキルだけです。MCP サーバーは `install.sh` で入れてください。スキルが重複しないよう、どちらか一方の方法だけを使ってください。
 
 ## 設定
 

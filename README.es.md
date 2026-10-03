@@ -144,7 +144,7 @@ Claude Code y Codex arrancan un servidor MCP stdio una sola vez y nunca se recon
 /plugin install linux-computer-use@linux-computer-use
 ```
 
-El plugin solo incluye la skill; instala el servidor MCP con `install.sh`. Usa una vía u otra, no ambas, para no duplicar la skill. Mientras el repositorio sea privado, añadirlo como marketplace requiere acceso a GitHub (`gh auth login`).
+El plugin solo incluye la skill; instala el servidor MCP con `install.sh`. Usa una vía u otra, no ambas, para no duplicar la skill.
 
 ## Configuración
 

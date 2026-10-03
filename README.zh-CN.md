@@ -144,7 +144,7 @@ Claude Code 和 Codex 只启动一次 stdio MCP 服务器，之后不会重连�
 /plugin install linux-computer-use@linux-computer-use
 ```
 
-插件只包含技能，MCP 服务器请用 `install.sh` 安装。两种方式只选一种，避免技能重复。仓库为私有期间，添加插件市场需要 GitHub 访问权限（`gh auth login`）。
+插件只包含技能，MCP 服务器请用 `install.sh` 安装。两种方式只选一种，避免技能重复。
 
 ## 配置
 

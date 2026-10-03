@@ -141,7 +141,7 @@ Claude Code and Codex start a stdio MCP server once and never reconnect, so if t
 /plugin install linux-computer-use@linux-computer-use
 ```
 
-The plugin ships only the skill. Install the MCP server with `install.sh`. Use one route or the other, not both, to avoid a duplicate skill. While the repository is private, adding it as a marketplace needs GitHub access (`gh auth login`).
+The plugin ships only the skill. Install the MCP server with `install.sh`. Use one route or the other, not both, to avoid a duplicate skill.
 
 ## Configuration
 
