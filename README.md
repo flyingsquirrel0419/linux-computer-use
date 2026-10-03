@@ -264,7 +264,7 @@ scripts/record_demo.sh                       # re-record docs/demo.gif on a thro
 
 Source layout: [`server.py`](src/lcu/server.py) (MCP tools), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py) (MPX pointer), [`input.py`](src/lcu/input.py) (XTEST, keymap), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py) (AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py) (cursor), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
 
-Release history: [CHANGELOG.md](CHANGELOG.md).
+Release history: [CHANGELOG.md](CHANGELOG.md). Contributing: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Credits
 

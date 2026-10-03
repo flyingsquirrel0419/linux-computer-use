@@ -267,7 +267,7 @@ scripts/record_demo.sh                       # 일회용 디스플레이에서 d
 
 소스 구성: [`server.py`](src/lcu/server.py)(MCP 툴), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py)(MPX 포인터), [`input.py`](src/lcu/input.py)(XTEST, 키맵), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py)(AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py)(커서), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
 
-릴리스 기록: [CHANGELOG.md](CHANGELOG.md).
+릴리스 기록: [CHANGELOG.md](CHANGELOG.md). 기여 방법: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 출처
 

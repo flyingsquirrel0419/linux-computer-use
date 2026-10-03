@@ -267,7 +267,7 @@ scripts/record_demo.sh                       # 使い捨てディスプレイで
 
 ソース構成: [`server.py`](src/lcu/server.py)(MCP ツール)、[`supervisor.py`](src/lcu/supervisor.py)、[`vpointer.py`](src/lcu/vpointer.py)(MPX ポインタ)、[`input.py`](src/lcu/input.py)(XTEST、キーマップ)、[`capture.py`](src/lcu/capture.py)、[`a11y.py`](src/lcu/a11y.py)(AT-SPI)、[`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py)(カーソル)、[`ime.py`](src/lcu/ime.py)、[`env.py`](src/lcu/env.py)。
 
-リリース履歴: [CHANGELOG.md](CHANGELOG.md)。
+リリース履歴: [CHANGELOG.md](CHANGELOG.md)。コントリビュート方法: [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## クレジット
 

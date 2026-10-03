@@ -267,7 +267,7 @@ scripts/record_demo.sh                       # vuelve a grabar docs/demo.gif en 
 
 Estructura del código: [`server.py`](src/lcu/server.py) (herramientas MCP), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py) (puntero MPX), [`input.py`](src/lcu/input.py) (XTEST, mapa de teclas), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py) (AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py) (cursor), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
 
-Historial de versiones: [CHANGELOG.md](CHANGELOG.md).
+Historial de versiones: [CHANGELOG.md](CHANGELOG.md). Cómo contribuir: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Créditos
 
