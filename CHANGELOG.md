@@ -7,6 +7,10 @@ dates in UTC.
 
 ## [Unreleased]
 
+### Changed
+
+- `install.sh` no longer turns on Codex auto-approval by default. New Codex registrations ask before each tool call. `--auto-approve` turns it on (needed for `codex exec`), `--no-auto-approve` turns it off. Without either option, an existing registration keeps its setting, and `install.sh` reports it. Registrations from 0.1.0–0.1.1 have auto-approval on: run `install.sh --no-auto-approve` to turn it off.
+
 ## [0.1.1] - 2026-10-03
 
 ### Fixed

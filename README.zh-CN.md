@@ -78,6 +78,7 @@ flowchart LR
    - 创建使用系统 PyGObject 的 venv。
    - 通过 `lcu-supervised` 把 `linux-cu` MCP 服务器注册到 Claude Code（用户范围）和 Codex（`~/.codex/config.toml`，备份为 `config.toml.bak-lcu`）。
    - 把技能软链接到 `~/.claude/skills` 和 `~/.codex/skills`。
+   - Codex 每次调用工具前都会请求确认。加上 `--auto-approve` 可跳过确认（非交互的 `codex exec` 需要），用 `--no-auto-approve` 可再次关闭。
 
 2. **验证**：
 
@@ -252,7 +253,7 @@ xinput remove-master "lcu-<pid> pointer"
 
 ## 安全
 
-- 智能体操作的是你的**真实桌面**。除了技能中的指引外没有内置的安全防护；设置 `default_tools_approval_mode = "approve"` 时，Codex 会不经询问直接调用工具。
+- 智能体操作的是你的**真实桌面**。除了技能中的指引外没有内置的安全防护；设置 `default_tools_approval_mode = "approve"`（只有 `install.sh --auto-approve` 会设置）时，Codex 会不经询问直接调用工具。
 - 如需隔离智能体，可在服务器环境中设置 `DISPLAY=:99`，让它在单独的显示器上运行（例如带窗口管理器的 `Xvfb :99`）。
 - 你的屏幕截图会发送给智能体所用的模型提供方。
 - 请私下报告漏洞，详见 [SECURITY.md](SECURITY.md)。

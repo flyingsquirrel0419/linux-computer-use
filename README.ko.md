@@ -78,6 +78,7 @@ flowchart LR
    - 시스템 PyGObject를 쓰는 venv를 만듭니다.
    - `linux-cu` MCP 서버를 `lcu-supervised`를 거쳐 Claude Code(사용자 범위)와 Codex(`~/.codex/config.toml`, 백업은 `config.toml.bak-lcu`)에 등록합니다.
    - 스킬을 `~/.claude/skills`와 `~/.codex/skills`에 심링크합니다.
+   - Codex는 툴을 호출할 때마다 확인을 받습니다. 이를 생략하려면 `--auto-approve`를 붙이세요(비대화형 `codex exec`에는 필요). `--no-auto-approve`로 다시 끌 수 있습니다.
 
 2. **확인**:
 
@@ -252,7 +253,7 @@ xinput remove-master "lcu-<pid> pointer"
 
 ## 안전
 
-- 에이전트는 **실제 데스크톱**을 조작합니다. 스킬의 지침 말고는 별도 안전장치가 없고, `default_tools_approval_mode = "approve"`면 Codex는 묻지 않고 도구를 호출합니다.
+- 에이전트는 **실제 데스크톱**을 조작합니다. 스킬의 지침 말고는 별도 안전장치가 없고, `default_tools_approval_mode = "approve"`(`install.sh --auto-approve`로만 설정됨)면 Codex는 묻지 않고 도구를 호출합니다.
 - 에이전트를 격리하려면 서버 환경에 `DISPLAY=:99`를 넣어 별도 디스플레이(예: 창 관리자를 띄운 `Xvfb :99`)에서 실행하세요.
 - 내 화면의 스크린샷은 에이전트가 쓰는 모델 제공자에게 전송됩니다.
 - 취약점은 비공개로 신고해 주세요. [SECURITY.md](SECURITY.md)를 참고하세요.

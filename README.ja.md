@@ -78,6 +78,7 @@ flowchart LR
    - システムの PyGObject を使う venv を作ります。
    - `linux-cu` MCP サーバーを `lcu-supervised` 経由で Claude Code(ユーザースコープ)と Codex(`~/.codex/config.toml`、バックアップは `config.toml.bak-lcu`)に登録します。
    - スキルを `~/.claude/skills` と `~/.codex/skills` にシンボリックリンクします。
+   - Codex はツールを呼び出すたびに確認を求めます。省略するには `--auto-approve` を付けてください(非対話の `codex exec` では必要)。`--no-auto-approve` で元に戻せます。
 
 2. **確認**:
 
@@ -252,7 +253,7 @@ xinput remove-master "lcu-<pid> pointer"
 
 ## 安全性
 
-- エージェントは**実際のデスクトップ**を操作します。スキルの指針以外に組み込みの安全装置はありません。`default_tools_approval_mode = "approve"` のとき、Codex は確認せずにツールを呼び出します。
+- エージェントは**実際のデスクトップ**を操作します。スキルの指針以外に組み込みの安全装置はありません。`default_tools_approval_mode = "approve"`(`install.sh --auto-approve` でのみ設定)のとき、Codex は確認せずにツールを呼び出します。
 - エージェントを隔離したい場合は、サーバーの環境に `DISPLAY=:99` を設定し、別のディスプレイ(ウィンドウマネージャーを動かした `Xvfb :99` など)で実行してください。
 - あなたの画面のスクリーンショットは、エージェントが使うモデルの提供元に送信されます。
 - 脆弱性は非公開で報告してください。[SECURITY.md](SECURITY.md) を参照してください。

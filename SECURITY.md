@@ -39,5 +39,5 @@ Out of scope:
 ## Security considerations for users
 
 - The server operates your **real desktop**, and screenshots of it are sent to the model provider your agent uses.
-- `install.sh` registers the server in Codex with `default_tools_approval_mode = "approve"`, so Codex calls these tools **without asking for each call**. Remove that line from `~/.codex/config.toml` if you want to approve each call.
+- By default Codex asks before each call to these tools. `install.sh --auto-approve` sets `default_tools_approval_mode = "approve"`, so Codex calls them **without asking**. Use it only if you accept that, and turn it off with `install.sh --no-auto-approve`. Registrations made by versions up to 0.1.1 have it on: run `install.sh --no-auto-approve` to turn it off.
 - To keep the agent away from your own session, run the server on a separate display (for example `Xvfb :99` plus a window manager) by setting `DISPLAY=:99` in its environment. See the README's [Safety](README.md#safety) section.
