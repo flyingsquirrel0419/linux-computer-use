@@ -34,6 +34,7 @@ claude mcp list                                 # → linux-cu: … run lcu-supe
 - [安全](#安全)
 - [开发](#开发)
 - [致谢](#致谢)
+- [许可证](#许可证)
 
 ## 工作原理
 
@@ -262,3 +263,7 @@ uv run python scripts/smoke_mcp.py --direct   # 绕过守护进程直接连接
 ## 致谢
 
 [`src/lcu/motion.py`](src/lcu/motion.py) 中的光标外形和运动模型移植自 [maka-agent](https://github.com/maka-agent/maka-agent)（Apache-2.0），该项目从 Codex 桌面应用中还原了这些数据。详见 [NOTICE](NOTICE)。本项目与 OpenAI 和 Anthropic 无关，也未获得其认可。
+
+## 许可证
+
+[Apache License 2.0](LICENSE)。署名说明见 [NOTICE](NOTICE)。

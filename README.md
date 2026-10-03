@@ -34,6 +34,7 @@ claude mcp list                                 # → linux-cu: … run lcu-supe
 - [Safety](#safety)
 - [Development](#development)
 - [Credits](#credits)
+- [License](#license)
 
 ## How it works
 
@@ -259,3 +260,7 @@ Source layout: [`server.py`](src/lcu/server.py) (MCP tools), [`supervisor.py`](s
 ## Credits
 
 The cursor glyph and motion model in [`src/lcu/motion.py`](src/lcu/motion.py) are ported from [maka-agent](https://github.com/maka-agent/maka-agent) (Apache-2.0). That project recovered them from the Codex desktop app. See [NOTICE](NOTICE). This project isn't affiliated with or endorsed by OpenAI or Anthropic.
+
+## License
+
+[Apache License 2.0](LICENSE). See [NOTICE](NOTICE) for attribution.

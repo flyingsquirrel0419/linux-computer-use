@@ -34,6 +34,7 @@ claude mcp list                                 # → linux-cu: … run lcu-supe
 - [安全性](#安全性)
 - [開発](#開発)
 - [クレジット](#クレジット)
+- [ライセンス](#ライセンス)
 
 ## 仕組み
 
@@ -262,3 +263,7 @@ uv run python scripts/smoke_mcp.py --direct   # スーパーバイザーを通�
 ## クレジット
 
 [`src/lcu/motion.py`](src/lcu/motion.py) のカーソルグリフとモーションモデルは [maka-agent](https://github.com/maka-agent/maka-agent)(Apache-2.0)から移植したものです。同プロジェクトが Codex デスクトップアプリから復元した値です。[NOTICE](NOTICE) を参照してください。本プロジェクトは OpenAI および Anthropic とは無関係で、承認も受けていません。
+
+## ライセンス
+
+[Apache License 2.0](LICENSE)。帰属表示は [NOTICE](NOTICE) を参照してください。

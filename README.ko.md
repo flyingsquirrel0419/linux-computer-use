@@ -34,6 +34,7 @@ claude mcp list                                 # → linux-cu: … run lcu-supe
 - [안전](#안전)
 - [개발](#개발)
 - [출처](#출처)
+- [라이선스](#라이선스)
 
 ## 동작 원리
 
@@ -262,3 +263,7 @@ uv run python scripts/smoke_mcp.py --direct   # 감시 프로세스 없이 직�
 ## 출처
 
 [`src/lcu/motion.py`](src/lcu/motion.py)의 커서 글리프와 모션 모델은 [maka-agent](https://github.com/maka-agent/maka-agent)(Apache-2.0)에서 옮겨왔습니다. 그 프로젝트가 Codex 데스크톱 앱에서 복원한 값입니다. [NOTICE](NOTICE)를 참고하세요. 이 프로젝트는 OpenAI나 Anthropic과 관계가 없으며 승인받지 않았습니다.
+
+## 라이선스
+
+[Apache License 2.0](LICENSE). 출처 고지는 [NOTICE](NOTICE)를 참고하세요.

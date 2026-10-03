@@ -34,6 +34,7 @@ claude mcp list                                 # → linux-cu: … run lcu-supe
 - [Seguridad](#seguridad)
 - [Desarrollo](#desarrollo)
 - [Créditos](#créditos)
+- [Licencia](#licencia)
 
 ## Cómo funciona
 
@@ -262,3 +263,7 @@ Estructura del código: [`server.py`](src/lcu/server.py) (herramientas MCP), [`s
 ## Créditos
 
 El glifo del cursor y el modelo de movimiento de [`src/lcu/motion.py`](src/lcu/motion.py) están portados de [maka-agent](https://github.com/maka-agent/maka-agent) (Apache-2.0), proyecto que los recuperó de la app de escritorio de Codex. Consulta [NOTICE](NOTICE). Este proyecto no está afiliado a OpenAI ni a Anthropic, ni cuenta con su respaldo.
+
+## Licencia
+
+[Apache License 2.0](LICENSE). Consulta [NOTICE](NOTICE) para las atribuciones.

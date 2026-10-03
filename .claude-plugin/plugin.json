@@ -8,6 +8,7 @@
   },
   "homepage": "https://github.com/flyingsquirrel0419/linux-computer-use",
   "repository": "https://github.com/flyingsquirrel0419/linux-computer-use",
+  "license": "Apache-2.0",
   "keywords": [
     "computer-use",
     "linux",

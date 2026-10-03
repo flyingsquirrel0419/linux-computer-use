@@ -1,4 +1,7 @@
 linux-computer-use
+Copyright 2026 날다람쥐 (flyingsquirrel0419)
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
 
 src/lcu/motion.py contains a Python port of the cursor glyph and motion
 model from maka-agent
