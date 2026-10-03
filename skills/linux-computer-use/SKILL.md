@@ -35,8 +35,9 @@ verify. Don't chain long blind sequences.
 ## Coordinates
 - All x/y are in the screenshot image's pixel space. The server maps them to
   real pixels, so don't rescale them yourself.
-- Your cursor is visible in screenshots: the coloured arrow with your name
-  (or a red cross when the overlay is off). The arrow's tip is the hotspot.
+- Your cursor is visible in screenshots as a small glassy arrow, or a red
+  cross when the overlay is off. Its hotspot is the **centre** of the arrow,
+  not the tip.
 - Small text: call `screenshot` with `x,y,width,height` to zoom in. You still
   click with full-screen coordinates.
 - Aim for the center of a target. For tiny targets (checkboxes, close
@@ -44,7 +45,7 @@ verify. Don't chain long blind sequences.
 
 ## Your own pointer (virtual mouse)
 - You have your own mouse pointer and keyboard. They're a second X pointer,
-  drawn as a coloured cursor with your name on it. The user's mouse doesn't
+  drawn as a Codex-style agent cursor. The user's mouse doesn't
   move and their keyboard focus doesn't change, so they can keep working
   while you act.
 - Your clicks hit whatever is visible under your pointer. They don't raise or

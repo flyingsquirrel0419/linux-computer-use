@@ -6,7 +6,6 @@ screenshot space before calling in.
 
 import math
 import os
-import random
 import time
 from contextlib import contextmanager
 
@@ -14,6 +13,7 @@ from Xlib import X, XK
 from Xlib.ext import xtest
 
 from . import display, ime, keys
+from . import motion as lmotion
 
 BUTTONS = {"left": 1, "middle": 2, "right": 3, "back": 8, "forward": 9}
 SCROLL_BUTTONS = {"up": 4, "down": 5, "left": 6, "right": 7}
@@ -38,7 +38,7 @@ def _kmd():
 
 
 # Hooks set by server.py to drive the cursor overlay (real screen pixels).
-on_move = None    # (x, y) -> None
+on_move = None    # (x, y, motion | None) -> None
 on_button = None  # (button_name, down: bool) -> None
 
 GLIDE = os.environ.get("LCU_GLIDE", "1") != "0"
@@ -46,41 +46,37 @@ GLIDE = os.environ.get("LCU_GLIDE", "1") != "0"
 
 # --------------------------------------------------------------------- mouse
 
-def move(x: int, y: int) -> None:
-    """Jump the pointer to (x, y)."""
+def move(x: int, y: int, motion: dict | None = None) -> None:
+    """Put the pointer at (x, y). `motion` carries glide state for the overlay."""
     with display.lock():
         xtest.fake_input(_d(), X.MotionNotify, x=x, y=y)
         _flush()
     if on_move:
-        on_move(x, y)
+        on_move(x, y, motion)
 
 
 def glide(x: int, y: int) -> None:
-    """Move along a gentle curve with ease-in-out, like a hand would.
-
-    Hover effects along the way fire naturally, and the overlay cursor
-    follows every step. LCU_GLIDE=0 makes this a plain jump.
+    """Travel like the Codex agent cursor: a planned cubic arc driven by a
+    damped spring (see motion.py). Hover effects fire along the way and the
+    overlay mirrors every frame. LCU_GLIDE=0 makes this a plain jump.
     """
     x0, y0 = position()
     dist = math.hypot(x - x0, y - y0)
-    if not GLIDE or dist < 4:
+    if not GLIDE or dist < 2:
         move(x, y)
         return
-    duration = min(0.55, 0.14 + dist / 2600)
-    steps = max(6, int(duration * 90))
-    # control point: midpoint pushed sideways by up to 18% of the distance
-    bend = random.uniform(0.06, 0.18) * random.choice((-1, 1)) * dist
-    mx, my = (x0 + x) / 2, (y0 + y) / 2
-    nx, ny = -(y - y0) / dist, (x - x0) / dist
-    cx, cy = mx + nx * bend, my + ny * bend
-    for i in range(1, steps + 1):
-        t = i / steps
-        t = t * t * (3 - 2 * t)  # smoothstep
-        px = (1 - t) ** 2 * x0 + 2 * (1 - t) * t * cx + t * t * x
-        py = (1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t * t * y
-        move(round(px), round(py))
-        time.sleep(duration / steps)
-    move(x, y)
+    last = None
+    t_next = time.monotonic()
+    for fx, fy, tan, pv, dt in lmotion.trajectory((x0, y0), (x, y), size=display.real_size()):
+        px, py = round(fx), round(fy)
+        if (px, py) != last:
+            move(px, py, {"tan": tan, "pv": pv, "dist": dist, "dt": dt})
+            last = (px, py)
+        t_next += dt
+        delay = t_next - time.monotonic()
+        if delay > 0:
+            time.sleep(delay)
+    move(x, y, {"arrive": True})
 
 
 def position() -> tuple[int, int]:

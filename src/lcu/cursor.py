@@ -13,8 +13,11 @@ _lock = threading.Lock()
 
 
 def label_for(client_name: str | None) -> str:
-    if "LCU_CURSOR_LABEL" in os.environ:
-        return os.environ["LCU_CURSOR_LABEL"]
+    """Name tag next to the cursor. Off by default, like Codex; set
+    LCU_CURSOR_LABEL to a text, or to "auto" for the client's name."""
+    want = os.environ.get("LCU_CURSOR_LABEL", "")
+    if want != "auto":
+        return want
     n = (client_name or "").lower()
     if "claude" in n:
         return "Claude"
@@ -56,8 +59,8 @@ def _send(msg: dict) -> None:
         pass
 
 
-def pos(x: int, y: int) -> None:
-    _send({"pos": [x, y]})
+def pos(x: int, y: int, motion: dict | None = None) -> None:
+    _send({"pos": [x, y], **(motion or {})})
 
 
 def button(name: str, down: bool) -> None:

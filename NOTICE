@@ -1,0 +1,15 @@
+linux-computer-use
+
+src/lcu/motion.py contains a Python port of the cursor glyph and motion
+model from maka-agent
+(apps/desktop/src/renderer/computer-use-overlay/engine/cursor-engine.ts,
+commit 5551d6cd1c730542d8584ef295584607f9ae4428,
+https://github.com/maka-agent/maka-agent), licensed under the Apache
+License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+Changes: translated to Python; path planning and spring integration run in
+the MCP server, while the scoot/press springs run in the GTK overlay.
+
+According to that project, the glyph outline and motion constants were
+recovered from the AgentCursor in OpenAI's Codex desktop app
+(SkyComputerUseService). Codex and OpenAI are trademarks of OpenAI; this
+project is not affiliated with or endorsed by OpenAI.
