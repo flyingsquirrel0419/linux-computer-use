@@ -6,9 +6,9 @@
 
 Linux 向けの computer use です。Claude Code と Codex が **X11 デスクトップ**を見て操作できるようにする MCP サーバー兼スキルで、スクリーンショット・マウス・キーボード・アクセシビリティツリーを扱います。エージェントは**専用の仮想ポインタとキーボード**を使うので、作業中もあなたのマウスとフォーカスはそのままです。
 
-![デモ: ユーザーが右のウィンドウで入力を続ける間、エージェントが専用ポインタで左のウィンドウに入力しメニューを開く](docs/demo.gif)
+![デモ: エージェントが専用のポインタとキーボードだけで、ターミナルからファイルマネージャーを開き、フォルダを作り、gedit で README.md を編集・保存し、git でコミットする](docs/demo.gif)
 
-*エージェント(青いカーソル)が MCP ツールで左のウィンドウを操作している間も、あなたは右側で入力を続けられます。使い捨ての X ディスプレイ上で* `scripts/record_demo.sh` *により録画。*
+*エージェントが MCP ツールで 3 つのアプリをまたいで 1 つの作業をこなします。ターミナルからファイルマネージャーを開き、フォルダを作り、gedit で `README.md` を編集・保存してから git でコミットします。使い捨ての X ディスプレイ上で* `scripts/record_demo.sh` *により録画。*
 
 ```bash
 git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use
@@ -262,7 +262,7 @@ xinput remove-master "lcu-<pid> pointer"
 uv run python scripts/smoke_mcp.py            # 読み取り専用: ツール一覧、画面情報、ウィンドウ一覧、スクリーンショット保存
 DISPLAY=:99 uv run python scripts/smoke_mcp.py
 uv run python scripts/smoke_mcp.py --direct   # スーパーバイザーを通さず直接接続
-dbus-run-session -- scripts/record_demo.sh    # 使い捨てディスプレイで docs/demo.gif を再録画
+scripts/record_demo.sh                       # 使い捨てディスプレイで docs/demo.gif を再録画
 ```
 
 ソース構成: [`server.py`](src/lcu/server.py)(MCP ツール)、[`supervisor.py`](src/lcu/supervisor.py)、[`vpointer.py`](src/lcu/vpointer.py)(MPX ポインタ)、[`input.py`](src/lcu/input.py)(XTEST、キーマップ)、[`capture.py`](src/lcu/capture.py)、[`a11y.py`](src/lcu/a11y.py)(AT-SPI)、[`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py)(カーソル)、[`ime.py`](src/lcu/ime.py)、[`env.py`](src/lcu/env.py)。

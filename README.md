@@ -6,9 +6,9 @@
 
 Computer use for Linux. An MCP server and skill that let Claude Code and Codex see and drive an **X11 desktop**: screenshots, mouse, keyboard and the accessibility tree. The agent gets **its own virtual pointer and keyboard**, so your mouse and focus stay yours while it works.
 
-![Demo: the agent types and opens a menu in the left window with its own pointer while the user keeps typing in the right one](docs/demo.gif)
+![Demo: the agent opens the file manager from a terminal, creates a folder, edits and saves README.md in gedit, then commits with git, using only its own pointer and keyboard](docs/demo.gif)
 
-*The agent (blue cursor) works in the left window through the MCP tools while you keep typing on the right. Recorded on a throwaway X display with* `scripts/record_demo.sh`.
+*One task across three apps, done by the agent through the MCP tools: open the file manager from the terminal, create a folder, edit and save `README.md` in gedit, then commit with git. Recorded on a throwaway X display with* `scripts/record_demo.sh`.
 
 ```bash
 git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use
@@ -259,7 +259,7 @@ xinput remove-master "lcu-<pid> pointer"
 uv run python scripts/smoke_mcp.py            # read-only: lists tools, screen info, windows, saves a screenshot
 DISPLAY=:99 uv run python scripts/smoke_mcp.py
 uv run python scripts/smoke_mcp.py --direct   # bypass the supervisor
-dbus-run-session -- scripts/record_demo.sh    # re-record docs/demo.gif on a throwaway display
+scripts/record_demo.sh                       # re-record docs/demo.gif on a throwaway display
 ```
 
 Source layout: [`server.py`](src/lcu/server.py) (MCP tools), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py) (MPX pointer), [`input.py`](src/lcu/input.py) (XTEST, keymap), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py) (AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py) (cursor), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).

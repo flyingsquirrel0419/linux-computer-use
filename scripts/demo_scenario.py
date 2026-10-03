@@ -1,9 +1,13 @@
 """Record docs/demo.gif on a throwaway X display (run via scripts/record_demo.sh).
 
-Two gedit windows: the agent works in the left one through the real MCP
-tools while a simulated user keeps typing in the right one with the core
-pointer and keyboard. The agent cursor is the real overlay; the user's
-cursor isn't part of Xvfb captures, so it is drawn onto the frames.
+A multi-app task, done by the agent through the real MCP tools only:
+  1. open the file manager (nemo) from the terminal
+  2. create a `notes` folder there
+  3. open README.md in the text editor (gedit), add a section, save
+  4. back in the terminal: add a file to notes/, then git status/commit/log
+
+New windows are tiled as they appear so the terminal output stays visible
+(agent clicks don't raise windows). Step captions are burned into the frames.
 
 Modes:
   --background   show a desktop-type gradient window (the wallpaper)
@@ -11,9 +15,9 @@ Modes:
 """
 
 import asyncio
-import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -24,6 +28,13 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 W, H = 1280, 720
 FPS = 12
+
+# where each app's window goes: (x, y, width, height)
+LAYOUT = {
+    "nemo": (12, 12, 616, 330),
+    "gedit": (12, 372, 616, 336),
+    "gnome-terminal": (652, 12, 616, 696),
+}
 
 
 def background() -> None:
@@ -51,52 +62,41 @@ def background() -> None:
     Gtk.main()
 
 
-# ------------------------------------------------------------------ helpers
+# ------------------------------------------------------------- tiling + rec
 
-def x_windows():
-    from Xlib import display
-    d = display.Display()
-    root = d.screen().root
-    out = {}
-    for c in root.get_full_property(d.intern_atom("_NET_CLIENT_LIST"), 0).value:
-        w = d.create_resource_object("window", c)
-        p = w.get_full_property(d.intern_atom("_NET_WM_NAME"), d.intern_atom("UTF8_STRING"))
-        if p:
-            out[p.value.decode()] = w
-    return d, root, out
+class Tiler(threading.Thread):
+    """Moves each app window to its LAYOUT slot as soon as it is mapped."""
 
+    def __init__(self):
+        super().__init__(daemon=True)
+        self.stop = threading.Event()
 
-def place(name: str, x: int, y: int, w: int, h: int) -> None:
-    from Xlib import X, protocol
-    d, root, wins = x_windows()
-    win = next(v for k, v in wins.items() if name in k)
-    ev = protocol.event.ClientMessage(
-        window=win, client_type=d.intern_atom("_NET_MOVERESIZE_WINDOW"),
-        data=(32, [(1 << 8) | (1 << 9) | (1 << 10) | (1 << 11) | 10, x, y, w, h]))
-    root.send_event(ev, event_mask=X.SubstructureRedirectMask | X.SubstructureNotifyMask)
-    d.sync()
-
-
-def activate(name: str) -> None:
-    from Xlib import X, protocol
-    d, root, wins = x_windows()
-    win = next(v for k, v in wins.items() if name in k)
-    ev = protocol.event.ClientMessage(window=win, client_type=d.intern_atom("_NET_ACTIVE_WINDOW"),
-                                      data=(32, [2, X.CurrentTime, 0, 0, 0]))
-    root.send_event(ev, event_mask=X.SubstructureRedirectMask | X.SubstructureNotifyMask)
-    d.sync()
-
-
-def draw_user_cursor(img, x: int, y: int) -> None:
-    from PIL import ImageDraw
-    d = ImageDraw.Draw(img)
-    arrow = [(0, 0), (0, 17), (4, 13), (7, 20), (10, 19), (7, 12), (12, 12)]
-    pts = [(x + px, y + py) for px, py in arrow]
-    d.polygon(pts, fill=(20, 20, 20), outline=(255, 255, 255))
-    d.line(pts + [pts[0]], fill=(255, 255, 255), width=1)
-    tx, ty = x + 14, y + 18
-    d.rounded_rectangle([tx, ty, tx + 34, ty + 18], radius=9, fill=(40, 40, 46), outline=(255, 255, 255))
-    d.text((tx + 7, ty + 3), "You", fill=(255, 255, 255))
+    def run(self):
+        from Xlib import X, display, protocol
+        d = display.Display()
+        root = d.screen().root
+        placed = set()
+        while not self.stop.is_set():
+            prop = root.get_full_property(d.intern_atom("_NET_CLIENT_LIST"), 0)
+            for wid in (prop.value if prop else []):
+                if wid in placed:
+                    continue
+                win = d.create_resource_object("window", wid)
+                try:
+                    cls = " ".join(win.get_wm_class() or ()).lower()
+                except Exception:
+                    continue
+                slot = next((v for k, v in LAYOUT.items() if k in cls), None)
+                if slot is None:
+                    continue
+                x, y, w, h = slot
+                ev = protocol.event.ClientMessage(
+                    window=win, client_type=d.intern_atom("_NET_MOVERESIZE_WINDOW"),
+                    data=(32, [(1 << 8) | (1 << 9) | (1 << 10) | (1 << 11) | 10, x, y, w, h]))
+                root.send_event(ev, event_mask=X.SubstructureRedirectMask | X.SubstructureNotifyMask)
+                d.sync()
+                placed.add(wid)
+            time.sleep(0.03)
 
 
 class Recorder(threading.Thread):
@@ -104,77 +104,51 @@ class Recorder(threading.Thread):
         super().__init__(daemon=True)
         self.out_dir, self.stop = out_dir, threading.Event()
         self.n = 0
+        self.caption = ""
 
     def run(self):
         import mss
-        from PIL import Image
-        from Xlib import display
-        core = display.Display()  # its pointer is the user's core pointer
+        from PIL import Image, ImageDraw, ImageFont
+        try:
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", 22)
+        except OSError:
+            font = ImageFont.load_default()
         with mss.MSS() as sct:
             nxt = time.monotonic()
             while not self.stop.is_set():
                 raw = sct.grab({"left": 0, "top": 0, "width": W, "height": H})
                 img = Image.frombytes("RGB", raw.size, raw.bgra, "raw", "BGRX")
-                p = core.screen().root.query_pointer()
-                draw_user_cursor(img, p.root_x, p.root_y)
+                if self.caption:
+                    d = ImageDraw.Draw(img, "RGBA")
+                    l, t, r, b = d.textbbox((0, 0), self.caption, font=font)
+                    tw, th = r - l, b - t
+                    x0, y0 = (W - tw) // 2 - 22, H - th - 46
+                    d.rounded_rectangle([x0, y0, x0 + tw + 44, y0 + th + 26], radius=(th + 26) // 2,
+                                        fill=(16, 22, 40, 225), outline=(90, 130, 255, 255), width=2)
+                    d.text((x0 + 22 - l, y0 + 13 - t), self.caption, font=font, fill=(255, 255, 255))
                 img.save(self.out_dir / f"{self.n:05d}.png", compress_level=1)
                 self.n += 1
                 nxt += 1 / FPS
                 time.sleep(max(0, nxt - time.monotonic()))
 
 
-def user_actions(stop_after: float) -> None:
-    """The 'human': glides the core pointer into the right window and types."""
-    from Xlib import X, display
-    from Xlib.ext import xtest
-    d = display.Display()
-
-    def move(x, y, dur=0.6):
-        p = d.screen().root.query_pointer()
-        x0, y0 = p.root_x, p.root_y
-        steps = int(dur * 60)
-        for i in range(1, steps + 1):
-            t = i / steps
-            t = t * t * (3 - 2 * t)
-            xtest.fake_input(d, X.MotionNotify, x=round(x0 + (x - x0) * t), y=round(y0 + (y - y0) * t))
-            d.sync()
-            time.sleep(dur / steps)
-
-    def type_(s, cps=11):
-        for ch in s:
-            ks = 0xFF0D if ch == "\n" else ord(ch)
-            codes = list(d.keysym_to_keycodes(ks))
-            code, idx = codes[0]
-            if idx == 1:
-                xtest.fake_input(d, X.KeyPress, d.keysym_to_keycode(0xFFE1))
-            xtest.fake_input(d, X.KeyPress, code)
-            xtest.fake_input(d, X.KeyRelease, code)
-            if idx == 1:
-                xtest.fake_input(d, X.KeyRelease, d.keysym_to_keycode(0xFFE1))
-            d.sync()
-            time.sleep(1 / cps)
-
-    t0 = time.monotonic()
-    move(980, 330, 0.8)
-    xtest.fake_input(d, X.ButtonPress, 1); xtest.fake_input(d, X.ButtonRelease, 1); d.sync()
-    time.sleep(0.3)
-    type_("Meanwhile, I keep working here.\n")
-    move(1040, 420, 0.7)
-    type_("My mouse and focus stay mine.\n")
-    while time.monotonic() - t0 < stop_after:
-        time.sleep(0.1)
-
+# ------------------------------------------------------------------- agent
 
 def parse_tree(text: str) -> list[dict]:
-    """ui_tree lines -> [{id, role, name, x, y}]"""
-    import re
-    out = []
-    for m in re.finditer(r'\[(\d+)\] (.+?)(?: "(.*?)")? @\((\d+),(\d+)\)', text):
-        out.append({"id": int(m[1]), "role": m[2], "name": m[3] or "", "x": int(m[4]), "y": int(m[5])})
+    """ui_tree lines -> [{id, role, name, x, y, window}]"""
+    out, window = [], ""
+    for line in text.splitlines():
+        if line.startswith("== "):
+            window = line
+            continue
+        m = re.search(r'\[(\d+)\] (.+?)(?: "(.*?)")? @\((\d+),(\d+)\)', line)
+        if m:
+            out.append({"id": int(m[1]), "role": m[2], "name": m[3] or "", "x": int(m[4]),
+                        "y": int(m[5]), "window": window})
     return out
 
 
-async def agent_actions(rec: "Recorder") -> None:
+async def agent_actions(rec: Recorder) -> None:
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
     env = {**os.environ, "LCU_CURSOR_LABEL": "Agent", "LCU_CURSOR_COLOR": "#4c7dff",
@@ -182,27 +156,73 @@ async def agent_actions(rec: "Recorder") -> None:
     p = StdioServerParameters(command="uv", args=["--directory", str(ROOT), "run", "lcu-supervised"], env=env)
     async with stdio_client(p) as (r, w), ClientSession(r, w) as s:
         await s.initialize()
-        call = s.call_tool
-        await call("screen_info", {})                      # agent pointer + cursor appear
+
+        async def call(name, **args):
+            res = await s.call_tool(name, args)
+            text = res.content[0].text if res.content and res.content[0].type == "text" else ""
+            if res.isError or text.startswith("NOT SENT"):
+                raise RuntimeError(f"{name}{args}: {text}")
+            return text
+
+        async def find(app, role, name=None, window=None, tries=20):
+            for _ in range(tries):
+                els = parse_tree(await call("ui_tree", app=app, only_interactive=False))
+                hits = [e for e in els if e["role"] == role and (name is None or e["name"] == name)
+                        and (window is None or window in e["window"])]
+                if hits:
+                    return hits[0]
+                await asyncio.sleep(0.4)
+            raise RuntimeError(f"{app}: no {role} {name!r}")
+
+        async def shell(cmd, pause=1.2):
+            await call("type_text", text=cmd + "\n", expect_window="terminal")
+            await asyncio.sleep(pause)
+
+        await call("screen_info")                       # the agent's pointer appears
+        await asyncio.sleep(1.0)
+
+        rec.caption = "1/4  Open the file manager from the terminal"
+        term = await find("gnome-terminal", "terminal")
+        await call("click_element", id=term["id"])
+        await shell("nemo . 2>/dev/null &", pause=3.0)
+
+        rec.caption = "2/4  Create a folder in the file manager"
+        view = await find("nemo", "layered pane", "Icon View")
+        await call("click_element", id=view["id"], method="mouse")
+        await call("key", combo="ctrl+shift+n", expect_window="nemo")
+        await asyncio.sleep(1.0)
+        await call("type_text", text="notes\n", expect_window="nemo")
         await asyncio.sleep(1.2)
-        els = parse_tree((await call("ui_tree", {"window": "agent.txt"})).content[0].text)
-        editor = next(e for e in els if e["role"] == "text")
-        await call("click_element", {"id": editor["id"]})  # glides there, clicks the editor
-        await call("type_text", {"text": "Hello from the agent! 안녕하세요 ✓\n", "expect_window": "agent.txt"})
-        await asyncio.sleep(0.6)
-        await call("type_text", {"text": "Typing in its own window, with its own pointer.\n",
-                                 "expect_window": "agent.txt"})
+        await call("key", combo="ctrl+2", expect_window="nemo")   # list view: files become readable
+        await asyncio.sleep(1.2)
+
+        rec.caption = "3/4  Open README.md in the text editor, edit and save"
+        readme = await find("nemo", "table cell", "README.md")
+        await call("click", x=readme["x"], y=readme["y"], count=2)
+        editor = await find("gedit", "text", window="README.md")
         await asyncio.sleep(0.8)
-        els = parse_tree((await call("ui_tree", {"window": "agent.txt"})).content[0].text)
-        menu = max((e for e in els if e["role"] == "toggle button"), key=lambda e: e["x"])
-        await call("click_element", {"id": menu["id"]})    # opens the main menu
-        await asyncio.sleep(1.4)
-        await call("key", {"combo": "Escape", "expect_window": "agent.txt"})
-        await call("mouse_move", {"x": 420, "y": 520})
-        await asyncio.sleep(2.6)                           # idle: the cursor "thinks"
-        rec.stop.set()                                     # stop before the server exits
+        await call("click_element", id=editor["id"])
+        await call("key", combo="ctrl+End", expect_window="gedit")
+        await call("type_text", text="\n\n## Notes\n\nOrganised in the file manager, edited here,\n"
+                                     "and committed from the terminal by an AI agent.",
+                   expect_window="gedit")
+        await asyncio.sleep(0.8)
+        await call("key", combo="ctrl+s", expect_window="gedit")
+        await asyncio.sleep(1.5)
+
+        rec.caption = "4/4  Commit the changes with git in the terminal"
+        term = await find("gnome-terminal", "terminal")   # ids change on every ui_tree call
+        await call("click_element", id=term["id"])
+        await shell("echo '# Ideas' > notes/ideas.md")
+        await shell("git status --short", pause=1.8)
+        await shell("git add -A && git commit -qm 'Add notes and a README section'")
+        await shell("git log --oneline --stat", pause=3.5)
+
+        rec.caption = ""
+        await call("mouse_move", x=900, y=640)
+        await asyncio.sleep(2.0)                         # idle: the cursor "thinks"
+        rec.stop.set()                                   # stop before the server exits
         rec.join()
-        print(json.dumps({"tools": len((await s.list_tools()).tools)}))
 
 
 def main() -> None:
@@ -211,20 +231,16 @@ def main() -> None:
         return
     out_gif = ROOT / "docs" / "demo.gif"
     out_gif.parent.mkdir(exist_ok=True)
-    place("agent.txt", 24, 60, 600, 560)
-    place("you.txt", 656, 60, 600, 560)
-    time.sleep(1.0)
-    activate("you.txt")                                    # the user's focus is on the right
-    time.sleep(0.8)
 
+    tiler = Tiler()
+    tiler.start()
+    time.sleep(1.5)                                      # terminal gets its slot
     frames = pathlib.Path(tempfile.mkdtemp(prefix="lcu-demo-frames-"))
     rec = Recorder(frames)
     rec.start()
-    time.sleep(0.8)
-    user = threading.Thread(target=user_actions, args=(9.0,), daemon=True)
-    user.start()
+    time.sleep(0.6)
     asyncio.run(agent_actions(rec))
-    user.join()
+    tiler.stop.set()
 
     vf = (f"fps={FPS},scale=960:-1:flags=lanczos,split[a][b];"
           "[a]palettegen=max_colors=192:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle")

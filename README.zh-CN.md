@@ -6,9 +6,9 @@
 
 面向 Linux 的 computer use。这是一个 MCP 服务器和技能，让 Claude Code 和 Codex 能看到并操作 **X11 桌面**：截图、鼠标、键盘和无障碍树。智能体使用**自己专属的虚拟指针和键盘**，所以它工作时你的鼠标和焦点都不受影响。
 
-![演示：用户在右侧窗口持续打字时，智能体用自己的指针在左侧窗口输入并打开菜单](docs/demo.gif)
+![演示：智能体只用自己的指针和键盘，从终端打开文件管理器、新建文件夹、在 gedit 中编辑并保存 README.md，然后用 git 提交](docs/demo.gif)
 
-*智能体（蓝色光标）通过 MCP 工具在左侧窗口工作，你可以在右侧继续打字。在一次性 X 显示器上用* `scripts/record_demo.sh` *录制。*
+*智能体通过 MCP 工具在三个应用之间完成一项任务：从终端打开文件管理器，新建文件夹，在 gedit 中编辑并保存 `README.md`，再用 git 提交。在一次性 X 显示器上用* `scripts/record_demo.sh` *录制。*
 
 ```bash
 git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use
@@ -262,7 +262,7 @@ xinput remove-master "lcu-<pid> pointer"
 uv run python scripts/smoke_mcp.py            # 只读：列出工具、屏幕信息、窗口，并保存截图
 DISPLAY=:99 uv run python scripts/smoke_mcp.py
 uv run python scripts/smoke_mcp.py --direct   # 绕过守护进程直接连接
-dbus-run-session -- scripts/record_demo.sh    # 在一次性显示器上重新录制 docs/demo.gif
+scripts/record_demo.sh                       # 在一次性显示器上重新录制 docs/demo.gif
 ```
 
 源码结构：[`server.py`](src/lcu/server.py)（MCP 工具）、[`supervisor.py`](src/lcu/supervisor.py)、[`vpointer.py`](src/lcu/vpointer.py)（MPX 指针）、[`input.py`](src/lcu/input.py)（XTEST、键位映射）、[`capture.py`](src/lcu/capture.py)、[`a11y.py`](src/lcu/a11y.py)（AT-SPI）、[`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py)（光标）、[`ime.py`](src/lcu/ime.py)、[`env.py`](src/lcu/env.py)。

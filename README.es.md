@@ -6,9 +6,9 @@
 
 Computer use para Linux. Un servidor MCP y una skill que permiten a Claude Code y Codex ver y manejar un **escritorio X11**: capturas de pantalla, ratón, teclado y el árbol de accesibilidad. El agente usa **su propio puntero y teclado virtuales**, así que tu ratón y tu foco siguen siendo tuyos mientras trabaja.
 
-![Demo: el agente escribe y abre un menú en la ventana izquierda con su propio puntero mientras el usuario sigue escribiendo en la derecha](docs/demo.gif)
+![Demo: el agente abre el gestor de archivos desde una terminal, crea una carpeta, edita y guarda README.md en gedit y hace commit con git, usando solo su propio puntero y teclado](docs/demo.gif)
 
-*El agente (cursor azul) trabaja en la ventana izquierda con las herramientas MCP mientras tú sigues escribiendo a la derecha. Grabado en una pantalla X desechable con* `scripts/record_demo.sh`.
+*Una tarea en tres apps, hecha por el agente con las herramientas MCP: abre el gestor de archivos desde la terminal, crea una carpeta, edita y guarda `README.md` en gedit y hace commit con git. Grabado en una pantalla X desechable con* `scripts/record_demo.sh`.
 
 ```bash
 git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use
@@ -262,7 +262,7 @@ xinput remove-master "lcu-<pid> pointer"
 uv run python scripts/smoke_mcp.py            # solo lectura: lista herramientas, info de pantalla, ventanas y guarda una captura
 DISPLAY=:99 uv run python scripts/smoke_mcp.py
 uv run python scripts/smoke_mcp.py --direct   # sin pasar por el supervisor
-dbus-run-session -- scripts/record_demo.sh    # vuelve a grabar docs/demo.gif en una pantalla desechable
+scripts/record_demo.sh                       # vuelve a grabar docs/demo.gif en una pantalla desechable
 ```
 
 Estructura del código: [`server.py`](src/lcu/server.py) (herramientas MCP), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py) (puntero MPX), [`input.py`](src/lcu/input.py) (XTEST, mapa de teclas), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py) (AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py) (cursor), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
