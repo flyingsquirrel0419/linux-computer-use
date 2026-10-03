@@ -267,6 +267,8 @@ scripts/record_demo.sh                       # 在一次性显示器上重新录
 
 源码结构：[`server.py`](src/lcu/server.py)（MCP 工具）、[`supervisor.py`](src/lcu/supervisor.py)、[`vpointer.py`](src/lcu/vpointer.py)（MPX 指针）、[`input.py`](src/lcu/input.py)（XTEST、键位映射）、[`capture.py`](src/lcu/capture.py)、[`a11y.py`](src/lcu/a11y.py)（AT-SPI）、[`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py)（光标）、[`ime.py`](src/lcu/ime.py)、[`env.py`](src/lcu/env.py)。
 
+版本历史：[CHANGELOG.md](CHANGELOG.md)。
+
 ## 致谢
 
 [`src/lcu/motion.py`](src/lcu/motion.py) 中的光标外形和运动模型移植自 [maka-agent](https://github.com/maka-agent/maka-agent)（Apache-2.0），该项目从 Codex 桌面应用中还原了这些数据。详见 [NOTICE](NOTICE)。本项目与 OpenAI 和 Anthropic 无关，也未获得其认可。

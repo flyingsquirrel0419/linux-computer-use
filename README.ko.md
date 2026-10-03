@@ -267,6 +267,8 @@ scripts/record_demo.sh                       # 일회용 디스플레이에서 d
 
 소스 구성: [`server.py`](src/lcu/server.py)(MCP 툴), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py)(MPX 포인터), [`input.py`](src/lcu/input.py)(XTEST, 키맵), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py)(AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py)(커서), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
 
+릴리스 기록: [CHANGELOG.md](CHANGELOG.md).
+
 ## 출처
 
 [`src/lcu/motion.py`](src/lcu/motion.py)의 커서 글리프와 모션 모델은 [maka-agent](https://github.com/maka-agent/maka-agent)(Apache-2.0)에서 옮겨왔습니다. 그 프로젝트가 Codex 데스크톱 앱에서 복원한 값입니다. [NOTICE](NOTICE)를 참고하세요. 이 프로젝트는 OpenAI나 Anthropic과 관계가 없으며 승인받지 않았습니다.

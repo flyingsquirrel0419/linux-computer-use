@@ -267,6 +267,8 @@ scripts/record_demo.sh                       # vuelve a grabar docs/demo.gif en 
 
 Estructura del código: [`server.py`](src/lcu/server.py) (herramientas MCP), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py) (puntero MPX), [`input.py`](src/lcu/input.py) (XTEST, mapa de teclas), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py) (AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py) (cursor), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
 
+Historial de versiones: [CHANGELOG.md](CHANGELOG.md).
+
 ## Créditos
 
 El glifo del cursor y el modelo de movimiento de [`src/lcu/motion.py`](src/lcu/motion.py) están portados de [maka-agent](https://github.com/maka-agent/maka-agent) (Apache-2.0), proyecto que los recuperó de la app de escritorio de Codex. Consulta [NOTICE](NOTICE). Este proyecto no está afiliado a OpenAI ni a Anthropic, ni cuenta con su respaldo.
