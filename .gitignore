@@ -25,6 +25,7 @@ htmlcov/
 *.png
 *.gif
 !docs/**/*.png
+!docs/**/*.gif
 
 # Packaged skill archives (built from skills/, attach to releases instead)
 *.zip

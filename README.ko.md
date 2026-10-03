@@ -6,6 +6,10 @@
 
 리눅스용 computer use입니다. Claude Code와 Codex가 **X11 데스크톱**을 보고 조작하게 해주는 MCP 서버이자 스킬로, 스크린샷·마우스·키보드·접근성 트리를 다룹니다. 에이전트는 **자기 전용 가상 포인터와 키보드**를 쓰기 때문에, 작업하는 동안에도 내 마우스와 포커스는 그대로입니다.
 
+![데모: 사용자가 오른쪽 창에서 계속 타이핑하는 동안 에이전트가 전용 포인터로 왼쪽 창에 입력하고 메뉴를 연다](docs/demo.gif)
+
+*에이전트(파란 커서)가 MCP 툴로 왼쪽 창에서 작업하는 동안 사용자는 오른쪽 창에서 계속 타이핑합니다. 일회용 X 디스플레이에서* `scripts/record_demo.sh`*로 녹화했습니다.*
+
 ```bash
 git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use
 ~/Documents/linux-computer-use/install.sh      # Claude Code와 Codex에 서버와 스킬 등록
@@ -258,6 +262,7 @@ xinput remove-master "lcu-<pid> pointer"
 uv run python scripts/smoke_mcp.py            # 읽기 전용: 툴 목록, 화면 정보, 창 목록, 스크린샷 저장
 DISPLAY=:99 uv run python scripts/smoke_mcp.py
 uv run python scripts/smoke_mcp.py --direct   # 감시 프로세스 없이 직접 연결
+dbus-run-session -- scripts/record_demo.sh    # 일회용 디스플레이에서 docs/demo.gif 다시 녹화
 ```
 
 소스 구성: [`server.py`](src/lcu/server.py)(MCP 툴), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py)(MPX 포인터), [`input.py`](src/lcu/input.py)(XTEST, 키맵), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py)(AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py)(커서), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
