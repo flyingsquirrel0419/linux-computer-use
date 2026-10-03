@@ -1,0 +1,17 @@
+{
+  "name": "linux-computer-use",
+  "owner": {
+    "name": "flyingsquirrel0419",
+    "url": "https://github.com/flyingsquirrel0419"
+  },
+  "metadata": {
+    "description": "Linux X11 computer use for Claude Code and Codex"
+  },
+  "plugins": [
+    {
+      "name": "linux-computer-use",
+      "source": "./",
+      "description": "Computer-use skill for Linux X11 desktops, driving the linux-cu MCP server (install the server with install.sh)."
+    }
+  ]
+}

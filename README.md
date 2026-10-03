@@ -1,120 +1,261 @@
 # linux-computer-use
 
-Claude Code·Codex 등 MCP를 지원하는 에이전트가 **리눅스 X11 데스크톱**을 직접 조작하게 해주는 stdio MCP 서버.
-외부 바이너리(xdotool, scrot 등) 없이 Python + XTest + AT-SPI로 동작한다.
+**English** | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
-## 툴
-| 분류 | 툴 |
-|---|---|
-| 보기 | `screenshot`(영역 확대 가능), `screen_info`, `cursor_position`, `active_window` |
-| 마우스 | `click`(더블/트리플, 수정키), `mouse_move`, `drag`, `mouse_down/up`, `scroll` |
-| 키보드 | `type_text`(한글·이모지 포함 유니코드), `key`("ctrl+shift+t", "alt+F4"...), `hold_key` — `expect_window`로 포커스 불일치 시 전송 거부 |
-| 접근성 | `list_windows`, `ui_tree`, `click_element`, `set_text` |
-| 기타 | `wait` |
+Computer use for Linux. An MCP server and skill that let Claude Code and Codex see and drive an **X11 desktop**: screenshots, mouse, keyboard and the accessibility tree. The agent gets **its own virtual pointer and keyboard**, so your mouse and focus stay yours while it works.
 
-- 모든 좌표는 **스크린샷 이미지 좌표계**. 긴 변 1280px로 축소되며 서버가 실제 픽셀로 변환한다 (`LCU_MAX_LONG_EDGE`로 조정).
-- 동작 툴은 `screenshot_after=true`로 결과 화면을 같은 호출에서 받을 수 있다.
-- 스크린샷의 빨간 십자가 마우스 포인터.
-
-## 가상 마우스 (에이전트 전용 포인터)
-Codex computer use처럼 에이전트가 **자기 마우스와 키보드**를 갖는다. X Input 2의 멀티 포인터(MPX)로
-`lcu-<pid>`라는 두 번째 포인터·키보드 쌍을 만들고, 서버의 모든 XTest 입력을 그쪽으로 보낸다.
-
-- 사용자 마우스는 움직이지 않고 키보드 포커스도 바뀌지 않는다. 에이전트가 일하는 동안 사용자도 계속 작업할 수 있다.
-- 에이전트 클릭은 창을 앞으로 올리거나 활성화하지 않는다. 키 입력은 **에이전트 포인터 아래 창**으로 간다.
-- 에이전트마다 포인터가 따로 생긴다. Claude Code와 Codex를 동시에 띄우면 커서도 두 개다. 서버가 끝나면 포인터를 지우고,
-  비정상 종료로 남은 포인터는 다음 실행 때 정리한다.
-- 화면에는 **Codex computer use 커서와 같은 모양과 움직임**의 오버레이 커서가 그려진다.
-  - 모양: Codex `AgentCursor` 윤곽(14px, 핫스팟은 화살표 끝이 아니라 **중앙**), 반투명 그라데이션 채움, 1.55px 테두리, 아래쪽 글로우
-  - 이동: 20개 후보 중 고른 3차 곡선 경로 + 스프링(감쇠 0.9). 196px 이상 이동하면 진행 방향으로 늘어나고(×1.38/×0.82) 회전(최대 76°)
-  - 클릭: 250ms 동안 눌림 펄스(크기 −10%). 대기(생각) 중에는 살짝 흔들린다
-  - 색은 배경화면에서 뽑는다(Codex와 같은 방식). 오버레이는 클릭을 통과시킨다
-  - 글리프 좌표와 모션 상수는 maka-agent가 Codex 앱 바이너리에서 복원한 값이다(Apache-2.0, [NOTICE](NOTICE) 참고)
-
-| 환경변수 | 기본값 | 설명 |
-|---|---|---|
-| `LCU_VIRTUAL_POINTER` | `1` | `0`이면 사용자 마우스를 같이 씀 |
-| `LCU_OVERLAY` | `1` | `0`이면 오버레이 커서 끔 |
-| `LCU_REMAP_SETTLE` | `0.12` | 한글 등 리매핑 글자 입력 전 keymap 반영 대기(초). 첫 글자가 빠지거나 다른 글자로 나오면 늘림 |
-| `LCU_GLIDE` | `1` | `0`이면 곡선·스프링 이동 없이 즉시 이동 |
-| `LCU_CURSOR_COLOR` | 배경화면 | `#rrggbb` 고정 색 |
-| `LCU_CURSOR_LABEL` | 없음 | 이름표 문구, `auto`면 클라이언트 이름(Claude/Codex) |
-| `LCU_CURSOR_ICON` | Codex 글리프 | 직접 만든 PNG/SVG 아이콘 |
-| `LCU_CURSOR_HOTSPOT` | `0,0` | 아이콘 안에서 클릭 지점(px) |
-| `LCU_CURSOR_SIZE` | `28` | 커스텀 아이콘 높이(px) |
-| `LCU_CURSOR_SCALE` | `1.0` | 커서 배율(1.0 = 14px) |
-
-환경변수는 MCP 등록의 `env`에 넣는다. Codex는 `[mcp_servers.linux-cu.env]`, Claude Code는 `claude mcp add -e KEY=VAL ...`.
-`xinput` 패키지가 필요하며, 없으면 자동으로 공유 포인터 모드로 동작한다.
-한계: 에이전트는 화면에 보이는 창만 조작할 수 있다. 가려진 창은 클릭이 위쪽 창으로 간다.
-
-## 설치 (한 번에)
 ```bash
 git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use
-~/Documents/linux-computer-use/install.sh
+~/Documents/linux-computer-use/install.sh      # registers the server + skill for Claude Code and Codex
+claude mcp list                                 # → linux-cu: … run lcu-supervised - ✔ Connected
 ```
-`install.sh`는 venv 생성(시스템 PyGObject 사용) → Claude Code·Codex에 MCP 서버 등록 → 스킬을
-`~/.claude/skills`, `~/.codex/skills`에 심링크한다. 다시 실행해도 안전하다.
 
-## 자동 재시작 (supervisor)
-Claude Code·Codex는 MCP 서버 프로세스가 끝나면 다시 연결하지 않아서, 서버가 죽으면 그 세션에서 도구가 사라진다.
-그래서 등록은 `lcu-supervised`로 한다. 이 작은 감시 프로세스가 실제 서버(`python -m lcu.server`)를 자식으로 실행하고 메시지를 중계한다.
+- **No extra binaries.** No xdotool or scrot: pure Python over XTEST, X Input 2 and AT-SPI.
+- **Own pointer.** A second X master pointer/keyboard per agent. Your cursor doesn't move and your focused window doesn't change.
+- **Native widgets.** `ui_tree` lists buttons and fields with coordinates; `click_element` / `set_text` act on them directly.
+- **Unicode typing.** Korean, CJK and emoji work, including with an ibus Hangul input method active.
+- **Codex-style cursor.** A click-through overlay draws the agent's pointer with the Codex computer-use glyph and motion.
+- **Survives crashes.** A supervisor restarts the server and restores the MCP session, so the tools don't vanish mid-session.
 
-- 자식이 죽거나 종료하면 바로 다시 띄우고, 클라이언트가 처음 보낸 `initialize`/`initialized`를 다시 보내 세션을 복구한다.
-  클라이언트 입장에서는 연결이 끊기지 않는다.
-- 죽는 순간 처리 중이던 요청에는 `-32000 "...server restarted...; please retry"` 오류를 돌려준다. 클릭 같은 동작이
-  두 번 실행되지 않도록 자동 재시도는 하지 않는다. 재시작 중에 들어온 요청은 대기열에 두었다가 이어서 보낸다.
-- 60초 안에 3번 넘게 죽으면 재시작 간격을 0.25초부터 두 배씩 늘린다(최대 10초).
-- 클라이언트가 연결을 닫거나 감시 프로세스에 종료 신호가 오면, 자식을 정리하고(가상 포인터 제거) 같이 끝난다.
-- 재시작 기록은 stderr에 남는다. `LCU_SUPERVISOR_LOG=/path`로 파일에 남길 수도 있다.
+## Contents
 
-## 스킬
-[`skills/linux-computer-use/SKILL.md`](skills/linux-computer-use/SKILL.md)는 Anthropic computer use 방식의 작업 지침이다:
-보기 → 찾기(접근성 트리 우선) → 한 동작 → 검증 루프, 좌표 규칙, 입력 전 포커스 확인, 대기, 막혔을 때 대처,
-화면 속 지시문을 데이터로 취급하기, 되돌릴 수 없는 동작 전 사용자 확인.
+- [How it works](#how-it-works)
+- [Requirements](#requirements)
+- [Quick start](#quick-start)
+- [Tools](#tools)
+- [Virtual pointer](#virtual-pointer)
+- [Agent cursor](#agent-cursor)
+- [Auto-restart](#auto-restart)
+- [Skill and plugin](#skill-and-plugin)
+- [Configuration](#configuration)
+- [Manual registration](#manual-registration)
+- [Troubleshooting](#troubleshooting)
+- [Uninstall](#uninstall)
+- [Safety](#safety)
+- [Development](#development)
+- [Credits](#credits)
 
-## 수동 설치
+## How it works
+
+```mermaid
+flowchart LR
+    host["Claude Code / Codex"] -- "MCP stdio" --> sup["lcu-supervised<br/>(restarts, replays init)"]
+    sup --> srv["lcu.server<br/>(18 tools)"]
+    srv -- "XTEST via own<br/>master pointer/keyboard" --> x11["X11 desktop"]
+    srv -- "AT-SPI" --> apps["GTK / Qt / Chromium apps"]
+    srv -- "positions, clicks" --> ov["cursor overlay<br/>(GTK, click-through)"]
+    ov --> x11
+```
+
+Every coordinate the agent sends or receives is in the pixel space of the screenshot it was given (long edge 1280 px by default). The server converts to real pixels, so the model never rescales anything.
+
+## Requirements
+
+| | |
+|---|---|
+| OS / session | Linux with an **X11** session (tested: Ubuntu 24.04, Cinnamon). Wayland is not supported. |
+| Python | System `python3` ≥ 3.10 with PyGObject and AT-SPI: `python3-gi gir1.2-atspi-2.0 at-spi2-core` (usually preinstalled) |
+| Tools | [`uv`](https://docs.astral.sh/uv/), `xinput` (for the virtual pointer; without it the agent shares your mouse) |
+| Agents | [Claude Code](https://claude.com/claude-code) and/or Codex CLI; `install.sh` configures whichever is installed |
+
+## Quick start
+
+1. **Install** (idempotent, safe to re-run after `git pull`):
+
+   ```bash
+   git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/linux-computer-use
+   ~/Documents/linux-computer-use/install.sh
+   ```
+
+   It creates a venv that uses the system PyGObject, registers the `linux-cu` MCP server (through `lcu-supervised`) with Claude Code (user scope) and Codex (`~/.codex/config.toml`, backup in `config.toml.bak-lcu`), and symlinks the skill into `~/.claude/skills` and `~/.codex/skills`.
+
+2. **Verify:**
+
+   ```bash
+   claude mcp list | grep linux-cu     # ✔ Connected
+   codex mcp list | grep linux-cu      # enabled
+   ```
+
+3. **Use it.** Start a **new** Claude Code or Codex session (running sessions don't pick up new servers) and ask for something on screen, for example *"Open gedit and write a short note in Korean."* The agent takes a screenshot, finds the widgets, clicks, types and checks the result.
+
+## Tools
+
+| Group | Tools |
+|---|---|
+| See | `screenshot` (optionally a zoomed region), `screen_info`, `cursor_position`, `active_window` |
+| Mouse | `click` (double/triple, modifiers), `mouse_move`, `drag`, `mouse_down`, `mouse_up`, `scroll` |
+| Keyboard | `type_text` (any Unicode), `key` (`ctrl+shift+t`, `alt+F4`, `Return`…), `hold_key` |
+| Accessibility | `list_windows`, `ui_tree`, `click_element`, `set_text` |
+| Other | `wait` (then returns a screenshot) |
+
+- Action tools accept `screenshot_after: true` to return the resulting screen in the same call.
+- `type_text` and `key` accept `expect_window`, a substring of the target window's title or WM class. If the window that would receive the keys doesn't match, nothing is sent.
+- `ui_tree` returns lines like `[9] push button "Save" @(756,21)`. The ids stay valid until the next `ui_tree` call.
+
+## Virtual pointer
+
+Like Codex computer use, the agent works with its own input devices. On its first action the server creates an X Input 2 master pointer/keyboard pair named `lcu-<pid>` and routes all of its XTEST input through it.
+
+- Your mouse never moves and your keyboard focus never changes, so you can keep working.
+- Agent clicks don't raise or activate windows. **Agent keystrokes go to the window under the agent's pointer**, which is why `click_element` and `set_text` first move the pointer onto the element.
+- Each agent gets its own pair: run Claude Code and Codex together and you'll see two cursors. The pair is removed when the server exits, and pairs left by crashed servers are cleaned up on the next start.
+- `screen_info` reports `"virtual_pointer": true` when this mode is on.
+
+**Limit:** the agent can only act on what is visible on screen. Clicking where a window is covered hits the window on top.
+
+## Agent cursor
+
+A click-through GTK overlay draws the agent's pointer:
+
+- **Glyph:** the Codex `AgentCursor` outline, 14 px. The hotspot is the glyph's **centre**, not its tip. It has a translucent gradient fill, a 1.55 px rim and a soft glow.
+- **Motion:** a cubic path picked from 20 candidates, driven by a damped spring (damping 0.9). On moves of 196 px or more the cursor stretches along its heading (×1.38 / ×0.82) and rotates (up to 76°).
+- **Click:** a 250 ms press pulse (−10 % scale).
+- **Idle:** the cursor wiggles while the agent is idle (thinking).
+- **Colour:** taken from your wallpaper, as in Codex.
+- **Screenshots:** the cursor shows up in the agent's screenshots, so it can see where its pointer is.
+
+## Auto-restart
+
+Claude Code and Codex start a stdio MCP server once and never reconnect, so if the process exits the tools are gone for the rest of the session. The registered command is therefore `lcu-supervised`, a small supervisor that runs the real server (`python -m lcu.server`) as a child and relays JSON-RPC:
+
+- When the child exits for any reason, the supervisor starts a new one and replays the host's original `initialize` / `notifications/initialized`. The host keeps the same session.
+- Requests the child was handling when it died get the error `-32000 "linux-cu server restarted while handling …; please retry"`. They are not retried automatically, so a click can't run twice. Messages that arrive during the restart are queued.
+- From the third restart within 60 s, it waits before restarting: 0.25 s, doubling each time, up to 10 s.
+- When the host closes stdin or signals the supervisor, it stops the child (removing its virtual pointer) and exits.
+- Restarts are logged to stderr, or to a file set by `LCU_SUPERVISOR_LOG`.
+
+## Skill and plugin
+
+[`skills/linux-computer-use/SKILL.md`](skills/linux-computer-use/SKILL.md) teaches the agent how to work a desktop safely:
+
+- **Loop:** look → locate (accessibility tree first) → one action → verify.
+- **Coordinates and keystrokes:** coordinate rules, and how keystrokes follow the pointer.
+- **Patience:** wait for the UI, and recover when stuck.
+- **Judgment:** treat on-screen text as data, not instructions, and ask the user before irreversible actions.
+
+`install.sh` already links the skill for Claude Code and Codex. To install it as a **Claude Code plugin** instead (for example on another machine), use this repository as a marketplace:
+
+```text
+/plugin marketplace add flyingsquirrel0419/linux-computer-use
+/plugin install linux-computer-use@linux-computer-use
+```
+
+The plugin ships only the skill. Install the MCP server with `install.sh`. Use one route or the other, not both, to avoid a duplicate skill. While the repository is private, adding it as a marketplace needs GitHub access (`gh auth login`).
+
+## Configuration
+
+Set these in the MCP server's environment: `claude mcp add -e KEY=VALUE …` for Claude Code, or a `[mcp_servers.linux-cu.env]` table for Codex.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `LCU_VIRTUAL_POINTER` | `1` | `0`: share the user's pointer (no own pointer, no overlay) |
+| `LCU_OVERLAY` | `1` | `0`: don't draw the agent cursor |
+| `LCU_GLIDE` | `1` | `0`: jump instead of the curved spring motion |
+| `LCU_MAX_LONG_EDGE` | `1280` | Long edge of screenshots, in px |
+| `LCU_REMAP_SETTLE` | `0.12` | Seconds to wait after rebinding keys for non-layout characters (Hangul, emoji). Raise it if the first such character is dropped or wrong |
+| `LCU_IME_BYPASS` | `1` | `0`: don't switch ibus to a plain engine while typing |
+| `LCU_PLAIN_ENGINE` | `xkb:us::eng` | ibus engine used while typing |
+| `LCU_CURSOR_COLOR` | wallpaper | Fixed cursor colour, `#rrggbb` |
+| `LCU_CURSOR_SCALE` | `1.0` | Cursor scale (1.0 = 14 px) |
+| `LCU_CURSOR_LABEL` | none | Name tag next to the cursor; `auto` uses the client name (Claude/Codex) |
+| `LCU_CURSOR_ICON` | Codex glyph | Your own PNG/SVG icon |
+| `LCU_CURSOR_HOTSPOT` | `0,0` | Click point inside that icon, in px |
+| `LCU_CURSOR_SIZE` | `28` | Height of a custom icon, in px |
+| `LCU_SUPERVISOR_LOG` | stderr | File for supervisor restart logs |
+
+`DISPLAY`, `XAUTHORITY` and `DBUS_SESSION_BUS_ADDRESS` are detected automatically when the host doesn't pass them, preferring the display your desktop session uses ([`src/lcu/env.py`](src/lcu/env.py)).
+
+## Manual registration
+
+If you'd rather not run `install.sh`, set up the venv and register the server yourself:
+
 ```bash
-uv venv --python /usr/bin/python3 --system-site-packages   # 시스템 PyGObject(gi) 사용
+cd ~/Documents/linux-computer-use
+uv venv --python /usr/bin/python3 --system-site-packages   # use the system PyGObject (gi)
 uv sync
+claude mcp add -s user linux-cu -- uv --directory "$PWD" run lcu-supervised
 ```
-필요 시스템 패키지(Ubuntu): `python3-gi gir1.2-atspi-2.0 at-spi2-core` (보통 기본 설치됨).
 
-## 등록
-Claude Code:
-```bash
-claude mcp add -s user linux-cu -- uv --directory /home/flyingsquirrel/Documents/linux-computer-use run lcu-supervised
-```
-Codex (`~/.codex/config.toml`):
+Codex, in `~/.codex/config.toml`:
+
 ```toml
 [mcp_servers.linux-cu]
 command = "uv"
-args = ["--directory", "/home/flyingsquirrel/Documents/linux-computer-use", "run", "lcu-supervised"]
-startup_timeout_sec = 30
+args = ["--directory", "/home/you/Documents/linux-computer-use", "run", "lcu-supervised"]
+startup_timeout_sec = 60
 tool_timeout_sec = 120
-default_tools_approval_mode = "approve"   # 매 호출 승인 생략 (codex exec에선 필수)
+default_tools_approval_mode = "approve"   # skip per-call approval; required for `codex exec`
 ```
-`DISPLAY`, `XAUTHORITY`, `DBUS_SESSION_BUS_ADDRESS`는 비어 있으면 서버가 자동 감지한다(`src/lcu/env.py`).
 
-## 접근성 트리 활성화
-GTK 앱은 대개 바로 보인다. 안 보이면:
+## Troubleshooting
+
+<details>
+<summary><code>ui_tree</code> is empty or an app is missing</summary>
+
+GTK apps usually show up right away. If they don't, enable toolkit accessibility and restart the app:
+
 ```bash
 gsettings set org.gnome.desktop.interface toolkit-accessibility true
 ```
-Chrome/Chromium/Electron 앱(VS Code, Slack 등)은 `--force-renderer-accessibility` 플래그로 실행해야 트리가 나온다.
 
-## 한글 입력기(ibus)
-ibus-hangul이 한글 모드면 합성 키 입력의 영문이 한글로 조합된다. `type_text`는 입력 동안 ibus 엔진을
-`xkb:us::eng`로 바꿨다가 원래 엔진으로 복원한다(복원 후 한/영 상태는 ibus-hangul의 `initial-input-mode`로 돌아감).
-레이아웃에 없는 문자(한글 등)는 빈 keycode에 유니코드 keysym을 임시 바인딩해 입력한다.
-끄려면 `LCU_IME_BYPASS=0`.
+Chrome, Chromium and Electron apps (VS Code, Slack…) need `--force-renderer-accessibility`. Without it, use screenshots and coordinates.
+</details>
 
-## 한계
-- **X11 전용.** Wayland 세션은 XTest/화면 캡처가 막혀 있어 동작하지 않는다(XWayland 앱만 부분 동작).
-- 안전장치 없음: 에이전트가 실제 데스크톱을 그대로 조작한다. 격리가 필요하면 `Xvfb :99` 같은 별도 디스플레이에서
-  `DISPLAY=:99`로 서버를 띄우면 된다.
+<details>
+<summary><code>virtual_pointer</code> is <code>false</code></summary>
 
-## 테스트
+`screen_info` includes an `error` field. Common causes: `xinput` isn't installed (`sudo apt install xinput`), or `LCU_VIRTUAL_POINTER=0` is set. In this mode the agent moves your real mouse.
+</details>
+
+<details>
+<summary>Hangul or other non-ASCII characters are dropped or wrong</summary>
+
+- **Characters missing from the keyboard layout** are typed by briefly binding them to spare keycodes. If an app picks up keymap changes slowly, raise `LCU_REMAP_SETTLE` (for example `0.25`).
+- **ibus Hangul mode:** while typing, ibus is switched to `LCU_PLAIN_ENGINE` and then back. ibus-hangul then starts again in its `initial-input-mode`, usually Latin.
+</details>
+
+<details>
+<summary>The tools disappeared from a session</summary>
+
+Check that the registered command is `lcu-supervised`, not `lcu` (`claude mcp get linux-cu`). Re-running `install.sh` switches old registrations over. Sessions started before a change keep the old server until you start a new session.
+</details>
+
+<details>
+<summary>Nothing works on Wayland</summary>
+
+Wayland blocks XTEST input and screen capture for other clients. Log in to an X11 session.
+</details>
+
+## Uninstall
+
 ```bash
-uv run python scripts/smoke_mcp.py   # gedit을 띄워둔 상태에서 MCP로 툴 호출
+claude mcp remove -s user linux-cu
+rm ~/.claude/skills/linux-computer-use ~/.codex/skills/linux-computer-use   # symlinks only
 ```
+
+In `~/.codex/config.toml`, delete the `[mcp_servers.linux-cu]` table, or restore `~/.codex/config.toml.bak-lcu`. If a crashed server left an agent pointer behind, remove it:
+
+```bash
+xinput list --short | grep lcu-
+xinput remove-master "lcu-<pid> pointer"
+```
+
+## Safety
+
+- The agent operates your **real desktop**. Beyond the skill's guidance there are no built-in guardrails, and with `default_tools_approval_mode = "approve"` Codex calls the tools without asking.
+- To isolate the agent, run the server against a separate display (for example `Xvfb :99` with a window manager) by setting `DISPLAY=:99` in its environment.
+- Screenshots of your screen are sent to the model provider that the agent uses.
+
+## Development
+
+```bash
+uv run python scripts/smoke_mcp.py            # read-only: lists tools, screen info, windows, saves a screenshot
+DISPLAY=:99 uv run python scripts/smoke_mcp.py
+uv run python scripts/smoke_mcp.py --direct   # bypass the supervisor
+```
+
+Source layout: [`server.py`](src/lcu/server.py) (MCP tools), [`supervisor.py`](src/lcu/supervisor.py), [`vpointer.py`](src/lcu/vpointer.py) (MPX pointer), [`input.py`](src/lcu/input.py) (XTEST, keymap), [`capture.py`](src/lcu/capture.py), [`a11y.py`](src/lcu/a11y.py) (AT-SPI), [`overlay.py`](src/lcu/overlay.py) / [`motion.py`](src/lcu/motion.py) (cursor), [`ime.py`](src/lcu/ime.py), [`env.py`](src/lcu/env.py).
+
+## Credits
+
+The cursor glyph and motion model in [`src/lcu/motion.py`](src/lcu/motion.py) are ported from [maka-agent](https://github.com/maka-agent/maka-agent) (Apache-2.0). That project recovered them from the Codex desktop app. See [NOTICE](NOTICE). This project isn't affiliated with or endorsed by OpenAI or Anthropic.

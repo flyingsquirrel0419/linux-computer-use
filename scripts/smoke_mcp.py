@@ -1,22 +1,47 @@
-import asyncio, base64, pathlib
+"""Read-only smoke test: start the server over MCP stdio and call tools that
+don't click or type. Usage: uv run python scripts/smoke_mcp.py [--direct]
+
+By default it goes through the supervisor (lcu-supervised), like the
+registered server; --direct talks to lcu.server itself. A screenshot is
+saved to /tmp/lcu_smoke.png. Set DISPLAY=:99 to point it at a test display.
+"""
+
+import asyncio
+import base64
+import json
+import os
+import pathlib
+import sys
+
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
 async def main():
-    params = StdioServerParameters(command="uv", args=["--directory", str(pathlib.Path(__file__).resolve().parents[1]), "run", "lcu"])
+    entry = "lcu" if "--direct" in sys.argv else "lcu-supervised"
+    # pass our environment through: the MCP client otherwise drops DISPLAY and
+    # the server would autodetect the desktop session's display instead
+    params = StdioServerParameters(command="uv", args=["--directory", str(ROOT), "run", entry],
+                                   env=dict(os.environ))
     async with stdio_client(params) as (r, w):
         async with ClientSession(r, w) as s:
             await s.initialize()
-            tools = (await s.list_tools()).tools
-            print("tools:", [t.name for t in tools])
-            print((await s.call_tool("screen_info", {})).content[0].text)
-            tree = (await s.call_tool("ui_tree", {"app": "gedit"})).content[0].text
-            print(tree)
-            res = await s.call_tool("list_windows", {})
-            print(res.content[0].text[:300])
-            res = await s.call_tool("click_element", {"id": 5, "screenshot_after": True})
-            for c in res.content:
-                if c.type == "image":
-                    pathlib.Path("/tmp/lcu_smoke.png").write_bytes(base64.b64decode(c.data)); print("image ok", c.mimeType)
-                else: print(c.text)
-asyncio.run(main())
+            tools = [t.name for t in (await s.list_tools()).tools]
+            print(f"{len(tools)} tools:", ", ".join(tools))
+            info = json.loads((await s.call_tool("screen_info", {})).content[0].text)
+            print("screen_info:", info)
+            print("active_window:", (await s.call_tool("active_window", {})).content[0].text)
+            windows = json.loads((await s.call_tool("list_windows", {})).content[0].text)
+            print(f"list_windows: {len(windows)} windows")
+            tree = (await s.call_tool("ui_tree", {"active_window_only": True})).content[0].text
+            print("ui_tree (active window):", tree.splitlines()[0] if tree else "(empty)")
+            img = (await s.call_tool("screenshot", {})).content[0]
+            out = pathlib.Path("/tmp/lcu_smoke.png")
+            out.write_bytes(base64.b64decode(img.data))
+            print(f"screenshot: {img.mimeType} -> {out}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
