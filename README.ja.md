@@ -1,5 +1,7 @@
 # linux-computer-use
 
+[![リリース](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest)
+
 [English](README.md) | [한국어](README.ko.md) | **日本語** | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
 Linux 向けの computer use です。Claude Code と Codex が **X11 デスクトップ**を見て操作できるようにする MCP サーバー兼スキルで、スクリーンショット・マウス・キーボード・アクセシビリティツリーを扱います。エージェントは**専用の仮想ポインタとキーボード**を使うので、作業中もあなたのマウスとフォーカスはそのままです。

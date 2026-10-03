@@ -1,5 +1,7 @@
 # linux-computer-use
 
+[![发布版本](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest)
+
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | **简体中文** | [Español](README.es.md)
 
 面向 Linux 的 computer use。这是一个 MCP 服务器和技能，让 Claude Code 和 Codex 能看到并操作 **X11 桌面**：截图、鼠标、键盘和无障碍树。智能体使用**自己专属的虚拟指针和键盘**，所以它工作时你的鼠标和焦点都不受影响。

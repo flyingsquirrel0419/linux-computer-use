@@ -1,5 +1,7 @@
 # linux-computer-use
 
+[![Versión](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest)
+
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | **Español**
 
 Computer use para Linux. Un servidor MCP y una skill que permiten a Claude Code y Codex ver y manejar un **escritorio X11**: capturas de pantalla, ratón, teclado y el árbol de accesibilidad. El agente usa **su propio puntero y teclado virtuales**, así que tu ratón y tu foco siguen siendo tuyos mientras trabaja.

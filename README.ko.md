@@ -1,5 +1,7 @@
 # linux-computer-use
 
+[![릴리스](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest)
+
 [English](README.md) | **한국어** | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
 리눅스용 computer use입니다. Claude Code와 Codex가 **X11 데스크톱**을 보고 조작하게 해주는 MCP 서버이자 스킬로, 스크린샷·마우스·키보드·접근성 트리를 다룹니다. 에이전트는 **자기 전용 가상 포인터와 키보드**를 쓰기 때문에, 작업하는 동안에도 내 마우스와 포커스는 그대로입니다.
