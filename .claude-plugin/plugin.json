@@ -1,6 +1,6 @@
 {
   "name": "linux-computer-use",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Computer-use skill for Linux X11 desktops: screenshot, click, type and drive native apps through the linux-cu MCP server, with the agent's own virtual pointer.",
   "author": {
     "name": "flyingsquirrel0419",
