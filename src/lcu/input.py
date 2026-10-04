@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from Xlib import X, XK
 from Xlib.ext import xtest
 
-from . import display, ime, keys
+from . import display, ime, keymap_state, keys
 from . import motion as lmotion
 
 BUTTONS = {"left": 1, "middle": 2, "right": 3, "back": 8, "forward": 9}
@@ -153,10 +153,12 @@ class _Keymap:
     afterwards.
     """
 
-    def __init__(self):
+    def __init__(self, journal=None):
         self._spares: list[int] | None = None
         self._bound: dict[int, int] = {}  # keysym -> borrowed keycode (current batch)
         self._touched: set[int] = set()   # every keycode we changed, for restore()
+        self._entries: dict[int, dict] = {}
+        self._journal = journal
 
     def lookup(self, ks: int) -> tuple[int, bool] | None:
         if ks in self._bound:
@@ -192,12 +194,27 @@ class _Keymap:
         spares = self.spares()
         if len(keysyms) > len(spares):
             raise ValueError("more keysyms than spare keycodes")
-        self._bound = {}
+        if self._journal is None:
+            raise RuntimeError("keymap changes require a recovery journal")
+        updates = []
         for ks, code in zip(keysyms, spares):
-            per = len(d.get_keyboard_mapping(code, 1)[0])
-            d.change_keyboard_mapping(code, [[ks] * per])
-            self._bound[ks] = code
+            current = list(d.get_keyboard_mapping(code, 1)[0])
+            previous = self._entries.get(code)
+            if previous is None and any(current):
+                raise RuntimeError(f"spare keycode {code} is no longer empty")
+            if previous is not None and not keymap_state.owned_mapping(current, previous["bound"]):
+                raise RuntimeError(f"borrowed keycode {code} changed externally")
+            updates.append((ks, code, current, previous))
+        for ks, code, current, previous in updates:
+            self._entries[code] = {"code": code, "before": previous["before"] if previous else current,
+                                   "bound": [ks] * len(current),
+                                   "prior": previous["bound"] if previous else current}
             self._touched.add(code)
+        keymap_state.write(self._journal, list(self._entries.values()))
+        self._bound = {}
+        for ks, code, current, _ in updates:
+            d.change_keyboard_mapping(code, [[ks] * len(current)])
+            self._bound[ks] = code
         # round-trip on both connections: the server has applied the change
         # and the agent connection is ordered after it
         d.sync()
@@ -214,9 +231,11 @@ class _Keymap:
             return
         d = _kmd()
         for code in self._touched:
-            per = len(d.get_keyboard_mapping(code, 1)[0])
-            d.change_keyboard_mapping(code, [[0] * per])
+            entry = self._entries[code]
+            if keymap_state.matches_entry(list(d.get_keyboard_mapping(code, 1)[0]), entry):
+                d.change_keyboard_mapping(code, [entry["before"]])
         d.sync()
+        keymap_state.clear(self._journal)
         self._bound, self._touched = {}, set()
 
 
@@ -235,8 +254,8 @@ def _resolve(km: _Keymap, ks: int) -> tuple[int, bool]:
 @contextmanager
 def hold(names: list[str]):
     """Hold modifier/other keys (by name) for the duration of the block."""
-    with display.lock():
-        km = _Keymap()
+    with display.lock(), keymap_state.session() as journal:
+        km = _Keymap(journal)
         codes = []
         try:
             for n in names:
@@ -253,8 +272,8 @@ def hold(names: list[str]):
 def press_combo(combo: str, repeat: int = 1) -> None:
     """Press a chord such as 'ctrl+shift+t' (all down in order, up in reverse)."""
     syms = keys.parse_combo(combo)
-    with display.lock():
-        km = _Keymap()
+    with display.lock(), keymap_state.session() as journal:
+        km = _Keymap(journal)
         shift_code = km.lookup(_SHIFT)[0]
         try:
             for _ in range(repeat):
@@ -297,8 +316,8 @@ def _segments(km: _Keymap, text: str):
 
 
 def type_text(text: str, delay: float = KEY_DELAY) -> None:
-    with display.lock(), ime.plain_input():
-        km = _Keymap()
+    with display.lock(), keymap_state.session() as journal, ime.plain_input():
+        km = _Keymap(journal)
         shift_code = km.lookup(_SHIFT)[0]
         try:
             for piece, need in _segments(km, text):

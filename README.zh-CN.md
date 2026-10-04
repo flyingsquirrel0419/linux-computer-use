@@ -1,10 +1,10 @@
 # linux-computer-use
 
-[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![发布版本](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![许可证](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#环境要求) [![下载量](https://img.shields.io/github/downloads/flyingsquirrel0419/linux-computer-use/total)](https://github.com/flyingsquirrel0419/linux-computer-use/releases)
+[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![许可证](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#环境要求)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | **简体中文** | [Español](README.es.md)
 
-面向 Linux 的 computer use。这是一个 MCP 服务器和技能，让 Claude Code 和 Codex 能看到并操作 **X11 桌面**：截图、鼠标、键盘和无障碍树。智能体使用**自己专属的虚拟指针和键盘**，所以它工作时你的鼠标和焦点都不受影响。
+面向 Linux 的 computer use。这是一个 MCP 服务器和技能，让 Claude Code 和 Codex 能看到并操作 **X11 桌面**：截图、鼠标、键盘和无障碍树。当 `xinput` 能创建虚拟设备时，智能体会使用专属指针和键盘。操作前请通过 `screen_info` 确认此保护是否生效。
 
 ![演示：智能体只用自己的指针和键盘，从终端打开文件管理器、新建文件夹、在 gedit 中编辑并保存 README.md，然后用 git 提交](docs/demo.gif)
 
@@ -16,8 +16,8 @@ git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/l
 claude mcp list                                 # → linux-cu: … run lcu-supervised - ✔ Connected
 ```
 
-- **无需额外程序。** 不用 xdotool 或 scrot，纯 Python 实现，基于 XTEST、X Input 2 和 AT-SPI。
-- **专属指针。** 每个智能体都有第二个 X 主指针和键盘。你的光标不会移动，当前聚焦的窗口也不会变。
+- **无需 xdotool 或 scrot。** 输入和截图使用 Python；专属指针需要 `xinput`。
+- **可用时使用专属指针。** 每个智能体创建第二个 X 主指针和键盘；`screen_info` 会报告是否启用。
 - **原生控件。** `ui_tree` 列出按钮和输入框及其坐标；`click_element` / `set_text` 直接操作它们。
 - **Unicode 输入。** 韩文、中日韩文字和表情符号都能输入，即使开着 ibus 韩文输入法也可以。
 - **Codex 风格光标。** 一个可点击穿透的叠加层，用 Codex computer use 的光标外形和动效画出智能体的指针。
@@ -254,7 +254,7 @@ xinput remove-master "lcu-<pid> pointer"
 ## 安全
 
 - 智能体操作的是你的**真实桌面**。除了技能中的指引外没有内置的安全防护；设置 `default_tools_approval_mode = "approve"`（只有 `install.sh --auto-approve` 会设置）时，Codex 会不经询问直接调用工具。
-- 如需隔离智能体，可在服务器环境中设置 `DISPLAY=:99`，让它在单独的显示器上运行（例如带窗口管理器的 `Xvfb :99`）。
+- 如需隔离智能体，请让服务器和目标应用在单独的显示环境（如 `Xvfb :99`）及独立的 D-Bus 会话（`dbus-run-session`）中以 `DISPLAY=:99` 运行。无障碍工具会拒绝不属于所配置显示环境的应用。
 - 你的屏幕截图会发送给智能体所用的模型提供方。
 - 请私下报告漏洞，详见 [SECURITY.md](SECURITY.md)。
 

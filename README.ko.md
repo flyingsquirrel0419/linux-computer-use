@@ -1,10 +1,10 @@
 # linux-computer-use
 
-[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![릴리스](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![라이선스](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#요구-사항) [![다운로드](https://img.shields.io/github/downloads/flyingsquirrel0419/linux-computer-use/total)](https://github.com/flyingsquirrel0419/linux-computer-use/releases)
+[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![라이선스](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#요구-사항)
 
 [English](README.md) | **한국어** | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
-리눅스용 computer use입니다. Claude Code와 Codex가 **X11 데스크톱**을 보고 조작하게 해주는 MCP 서버이자 스킬로, 스크린샷·마우스·키보드·접근성 트리를 다룹니다. 에이전트는 **자기 전용 가상 포인터와 키보드**를 쓰기 때문에, 작업하는 동안에도 내 마우스와 포커스는 그대로입니다.
+리눅스용 computer use입니다. Claude Code와 Codex가 **X11 데스크톱**을 보고 조작하게 해주는 MCP 서버이자 스킬로, 스크린샷·마우스·키보드·접근성 트리를 다룹니다. `xinput`으로 가상 포인터와 키보드를 만들 수 있을 때 에이전트는 전용 입력 장치를 사용합니다. 동작 전 `screen_info`에서 활성 여부를 확인하세요.
 
 ![데모: 에이전트가 전용 포인터와 키보드만으로 터미널에서 파일 관리자를 열고, 폴더를 만들고, gedit에서 README.md를 편집·저장한 뒤 git으로 커밋한다](docs/demo.gif)
 
@@ -16,7 +16,7 @@ git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/l
 claude mcp list                                 # → linux-cu: … run lcu-supervised - ✔ Connected
 ```
 
-- **추가 프로그램 불필요.** xdotool이나 scrot 없이 순수 Python으로 XTEST, X Input 2, AT-SPI를 씁니다.
+- **xdotool·scrot 불필요.** 입력과 캡처는 Python으로 처리하며, 별도 에이전트 포인터에는 `xinput`이 필요합니다.
 - **전용 포인터.** 에이전트마다 두 번째 X 마스터 포인터·키보드가 생깁니다. 내 커서는 움직이지 않고, 포커스된 창도 바뀌지 않습니다.
 - **네이티브 위젯.** `ui_tree`가 버튼과 입력 칸을 좌표와 함께 보여주고, `click_element`·`set_text`로 바로 조작합니다.
 - **유니코드 입력.** 한글, CJK, 이모지가 입력됩니다. ibus 한글 입력기가 켜져 있어도 됩니다.
@@ -130,7 +130,7 @@ Codex computer use처럼 에이전트는 자기 입력 장치로 작업합니다
 Claude Code와 Codex는 stdio MCP 서버를 한 번 띄우고 다시 연결하지 않습니다. 그래서 프로세스가 끝나면 그 세션에서는 도구가 사라집니다. 이 때문에 등록하는 명령은 `lcu-supervised`입니다. 실제 서버(`python -m lcu.server`)를 자식 프로세스로 실행하고 JSON-RPC를 중계하는 작은 감시 프로세스입니다.
 
 - 자식이 어떤 이유로든 끝나면 새로 띄우고, 클라이언트가 처음 보낸 `initialize` / `notifications/initialized`를 다시 보냅니다. 클라이언트는 같은 세션을 그대로 씁니다.
-- 자식이 죽을 때 처리 중이던 요청에는 `-32000 "linux-cu server restarted while handling …; please retry"` 오류가 갑니다. 클릭이 두 번 실행되지 않도록 자동 재시도는 하지 않습니다. 재시작 중에 들어온 메시지는 대기열에 넣었다가 보냅니다.
+- 자식이 죽을 때 처리 중이던 요청에는 **결과를 알 수 없음** 오류가 갑니다. 응답이 사라지기 전에 동작이 완료됐을 수도 있으므로 데스크톱을 확인한 뒤 재시도하세요. 자동 재시도는 하지 않습니다.
 - 60초 안에 세 번째 재시작부터는 잠시 기다린 뒤 재시작합니다. 0.25초에서 시작해 매번 두 배로 늘고, 최대 10초입니다.
 - 클라이언트가 stdin을 닫거나 감시 프로세스에 종료 신호가 오면, 자식을 정리하고(가상 포인터 제거) 함께 끝납니다.
 - 재시작 기록은 stderr에 남고, `LCU_SUPERVISOR_LOG`로 파일에 남길 수도 있습니다.
@@ -254,7 +254,7 @@ xinput remove-master "lcu-<pid> pointer"
 ## 안전
 
 - 에이전트는 **실제 데스크톱**을 조작합니다. 스킬의 지침 말고는 별도 안전장치가 없고, `default_tools_approval_mode = "approve"`(`install.sh --auto-approve`로만 설정됨)면 Codex는 묻지 않고 도구를 호출합니다.
-- 에이전트를 격리하려면 서버 환경에 `DISPLAY=:99`를 넣어 별도 디스플레이(예: 창 관리자를 띄운 `Xvfb :99`)에서 실행하세요.
+- 에이전트를 격리하려면 서버와 대상 앱을 별도 디스플레이(예: 창 관리자를 띄운 `Xvfb :99`) 및 별도 D-Bus 세션(`dbus-run-session`)에서 `DISPLAY=:99`로 실행하세요. 접근성 도구는 설정된 디스플레이에 속하지 않은 앱을 거부합니다.
 - 내 화면의 스크린샷은 에이전트가 쓰는 모델 제공자에게 전송됩니다.
 - 취약점은 비공개로 신고해 주세요. [SECURITY.md](SECURITY.md)를 참고하세요.
 

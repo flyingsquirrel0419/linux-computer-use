@@ -12,11 +12,19 @@ import json
 import os
 import pathlib
 import sys
+import tempfile
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+def save_screenshot(data: str) -> pathlib.Path:
+    with tempfile.NamedTemporaryFile(prefix="lcu_smoke_", suffix=".png",
+                                     delete=False) as stream:
+        stream.write(base64.b64decode(data))
+        return pathlib.Path(stream.name)
 
 
 async def main():
@@ -38,8 +46,7 @@ async def main():
             tree = (await s.call_tool("ui_tree", {"active_window_only": True})).content[0].text
             print("ui_tree (active window):", tree.splitlines()[0] if tree else "(empty)")
             img = (await s.call_tool("screenshot", {})).content[0]
-            out = pathlib.Path("/tmp/lcu_smoke.png")
-            out.write_bytes(base64.b64decode(img.data))
+            out = save_screenshot(img.data)
             print(f"screenshot: {img.mimeType} -> {out}")
 
 

@@ -1,10 +1,10 @@
 # linux-computer-use
 
-[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![Versión](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![Licencia](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#requisitos) [![Descargas](https://img.shields.io/github/downloads/flyingsquirrel0419/linux-computer-use/total)](https://github.com/flyingsquirrel0419/linux-computer-use/releases)
+[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![Licencia](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#requisitos)
 
 [English](README.md) | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | **Español**
 
-Computer use para Linux. Un servidor MCP y una skill que permiten a Claude Code y Codex ver y manejar un **escritorio X11**: capturas de pantalla, ratón, teclado y el árbol de accesibilidad. El agente usa **su propio puntero y teclado virtuales**, así que tu ratón y tu foco siguen siendo tuyos mientras trabaja.
+Computer use para Linux. Un servidor MCP y una skill que permiten a Claude Code y Codex ver y manejar un **escritorio X11**: capturas de pantalla, ratón, teclado y el árbol de accesibilidad. Cuando `xinput` puede crear dispositivos virtuales, el agente usa su propio puntero y teclado. Comprueba `screen_info` antes de actuar para confirmar que esta protección está activa.
 
 ![Demo: el agente abre el gestor de archivos desde una terminal, crea una carpeta, edita y guarda README.md en gedit y hace commit con git, usando solo su propio puntero y teclado](docs/demo.gif)
 
@@ -16,8 +16,8 @@ git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/l
 claude mcp list                                 # → linux-cu: … run lcu-supervised - ✔ Connected
 ```
 
-- **Sin binarios extra.** Ni xdotool ni scrot: Python puro sobre XTEST, X Input 2 y AT-SPI.
-- **Puntero propio.** Cada agente tiene un segundo puntero y teclado maestros de X. Tu cursor no se mueve y la ventana que tienes enfocada no cambia.
+- **Sin xdotool ni scrot.** Python gestiona la entrada y las capturas; el puntero separado requiere `xinput`.
+- **Puntero propio cuando está disponible.** Cada agente crea un segundo puntero y teclado maestros de X; `screen_info` confirma si está activo.
 - **Widgets nativos.** `ui_tree` lista botones y campos con sus coordenadas; `click_element` / `set_text` actúan sobre ellos directamente.
 - **Escritura Unicode.** Coreano, CJK y emoji funcionan, incluso con el método de entrada hangul de ibus activo.
 - **Cursor al estilo Codex.** Una superposición que deja pasar los clics dibuja el puntero del agente con la forma y el movimiento del cursor de Codex computer use.
@@ -254,7 +254,7 @@ xinput remove-master "lcu-<pid> pointer"
 ## Seguridad
 
 - El agente maneja tu **escritorio real**. Aparte de las pautas de la skill no hay protecciones integradas, y con `default_tools_approval_mode = "approve"` (solo lo activa `install.sh --auto-approve`) Codex llama a las herramientas sin preguntar.
-- Para aislar al agente, ejecuta el servidor en otra pantalla (por ejemplo, `Xvfb :99` con un gestor de ventanas) definiendo `DISPLAY=:99` en su entorno.
+- Para aislar al agente, ejecuta el servidor y las aplicaciones de destino en otra pantalla (por ejemplo, `Xvfb :99`) y una sesión D-Bus separada (`dbus-run-session`), con `DISPLAY=:99`. Las herramientas de accesibilidad rechazan aplicaciones ajenas a la pantalla configurada.
 - Las capturas de tu pantalla se envían al proveedor del modelo que use el agente.
 - Informa de las vulnerabilidades en privado; consulta [SECURITY.md](SECURITY.md).
 
