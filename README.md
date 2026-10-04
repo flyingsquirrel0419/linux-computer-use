@@ -1,10 +1,10 @@
 # linux-computer-use
 
-[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![License](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#requirements) [![Downloads](https://img.shields.io/github/downloads/flyingsquirrel0419/linux-computer-use/total)](https://github.com/flyingsquirrel0419/linux-computer-use/releases)
+[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#requirements)
 
 **English** | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
-Computer use for Linux. An MCP server and skill that let Claude Code and Codex see and drive an **X11 desktop**: screenshots, mouse, keyboard and the accessibility tree. The agent gets **its own virtual pointer and keyboard**, so your mouse and focus stay yours while it works.
+Computer use for Linux. An MCP server and skill that let Claude Code and Codex see and drive an **X11 desktop**: screenshots, mouse, keyboard and the accessibility tree. When `xinput` can create a virtual pointer and keyboard, the agent uses its own input devices so your mouse stays yours. Check `screen_info` before acting: it reports when this protection is unavailable.
 
 ![Demo: the agent opens the file manager from a terminal, creates a folder, edits and saves README.md in gedit, then commits with git, using only its own pointer and keyboard](docs/demo.gif)
 
@@ -16,8 +16,8 @@ git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/l
 claude mcp list                                 # → linux-cu: … run lcu-supervised - ✔ Connected
 ```
 
-- **No extra binaries.** No xdotool or scrot: pure Python over XTEST, X Input 2 and AT-SPI.
-- **Own pointer.** A second X master pointer/keyboard per agent. Your cursor doesn't move and your focused window doesn't change.
+- **No xdotool or scrot.** Input and capture use Python; `xinput` is required for a separate agent pointer.
+- **Own pointer when available.** A second X master pointer/keyboard per agent. `screen_info` reports whether it is active.
 - **Native widgets.** `ui_tree` lists buttons and fields with coordinates; `click_element` / `set_text` act on them directly.
 - **Unicode typing.** Korean, CJK and emoji work, including with an ibus Hangul input method active.
 - **Codex-style cursor.** A click-through overlay draws the agent's pointer with the Codex computer-use glyph and motion.
@@ -60,7 +60,7 @@ Every coordinate the agent sends or receives is in the pixel space of the screen
 
 | | |
 |---|---|
-| OS / session | Linux with an **X11** session (tested: Ubuntu 24.04, Cinnamon). Wayland is not supported. |
+| OS / session | Linux with an **X11** session (tested interactively: Ubuntu 24.04/Cinnamon; CI: Ubuntu 22.04 and 24.04, Debian Bookworm with Xvfb/Openbox). Wayland is not supported. |
 | Python | System `python3` ≥ 3.10 with PyGObject and AT-SPI: `python3-gi gir1.2-atspi-2.0 at-spi2-core` (usually preinstalled) |
 | Tools | [`uv`](https://docs.astral.sh/uv/), `xinput` (for the virtual pointer; without it the agent shares your mouse) |
 | Agents | [Claude Code](https://claude.com/claude-code) and/or Codex CLI; `install.sh` configures whichever is installed |
@@ -125,8 +125,8 @@ A click-through GTK overlay draws the agent's pointer:
 
 Claude Code and Codex start a stdio MCP server once and never reconnect, so if the process exits the tools are gone for the rest of the session. The registered command is therefore `lcu-supervised`, a small supervisor that runs the real server (`python -m lcu.server`) as a child and relays JSON-RPC:
 
-- When the child exits for any reason, the supervisor starts a new one and replays the host's original `initialize` / `notifications/initialized`. The host keeps the same session.
-- Requests the child was handling when it died get the error `-32000 "linux-cu server restarted while handling …; please retry"`. They are not retried automatically, so a click can't run twice. Messages that arrive during the restart are queued.
+- When the child exits for any reason, the supervisor restores temporary key mappings, starts a new one and replays the host's original `initialize` / `notifications/initialized`. The host keeps the same session.
+- Requests the child was handling when it died get an **outcome unknown** error. They are not retried automatically: an action may already have happened before its reply was lost. Inspect the desktop before retrying. Messages that arrive during the restart are queued.
 - From the third restart within 60 s, it waits before restarting: 0.25 s, doubling each time, up to 10 s.
 - When the host closes stdin or signals the supervisor, it stops the child (removing its virtual pointer) and exits.
 - Restarts are logged to stderr, or to a file set by `LCU_SUPERVISOR_LOG`.
@@ -250,7 +250,7 @@ xinput remove-master "lcu-<pid> pointer"
 ## Safety
 
 - The agent operates your **real desktop**. Beyond the skill's guidance there are no built-in guardrails, and with `default_tools_approval_mode = "approve"` (set only by `install.sh --auto-approve`) Codex calls the tools without asking.
-- To isolate the agent, run the server against a separate display (for example `Xvfb :99` with a window manager) by setting `DISPLAY=:99` in its environment.
+- To isolate the agent, run the server **and target apps** on a separate display (for example `Xvfb :99` with a window manager) and a separate D-Bus session (`dbus-run-session`), with `DISPLAY=:99`. Accessibility tools reject apps whose process does not belong to the configured display; apps without a readable display identity will not appear in `ui_tree`.
 - Screenshots of your screen are sent to the model provider that the agent uses.
 - Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 

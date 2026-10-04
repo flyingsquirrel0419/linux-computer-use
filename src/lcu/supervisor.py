@@ -28,6 +28,8 @@ import sys
 import threading
 import time
 
+from . import env
+
 CHILD = [sys.executable, "-m", "lcu.server"]
 REPLAY_ID = "lcu-supervisor-replay-init"
 RETRY_ERROR = -32000
@@ -55,9 +57,17 @@ def _to_host(raw: bytes) -> None:
         sys.stdout.buffer.flush()
 
 
+def _recover_keymap() -> None:
+    try:
+        from . import keymap_state
+        keymap_state.recover()
+    except Exception as exc:
+        _log(f"keymap recovery failed: {exc}")
+
+
 class Supervisor:
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.child: subprocess.Popen | None = None
         self.ready = False            # child initialised and accepting traffic
         self.queue: list[bytes] = []  # host messages waiting for a ready child
@@ -137,6 +147,7 @@ class Supervisor:
                     self.pending.pop(msg["id"], None)
             _to_host(raw)
         child.wait()
+        _recover_keymap()
         self.on_child_exit(child)
 
     def on_child_exit(self, child: subprocess.Popen) -> None:
@@ -153,7 +164,7 @@ class Supervisor:
             _to_host(json.dumps({
                 "jsonrpc": "2.0", "id": rid,
                 "error": {"code": RETRY_ERROR,
-                          "message": f"linux-cu server restarted while handling {method}; please retry"},
+                          "message": f"linux-cu server restarted while handling {method}; outcome unknown; inspect the desktop before retrying"},
             }).encode())
         # backoff: immediate at first, up to 10 s if it keeps crashing
         now = time.monotonic()
@@ -199,9 +210,12 @@ class Supervisor:
                     child.wait(timeout=3)
                 except subprocess.TimeoutExpired:
                     child.kill()
+                    child.wait()
+        _recover_keymap()
 
 
 def main() -> None:
+    env.ensure()
     sup = Supervisor()
 
     def on_signal(signum, _frame):

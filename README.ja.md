@@ -1,10 +1,10 @@
 # linux-computer-use
 
-[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![リリース](https://img.shields.io/github/v/release/flyingsquirrel0419/linux-computer-use)](https://github.com/flyingsquirrel0419/linux-computer-use/releases/latest) [![ライセンス](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#要件) [![ダウンロード](https://img.shields.io/github/downloads/flyingsquirrel0419/linux-computer-use/total)](https://github.com/flyingsquirrel0419/linux-computer-use/releases)
+[![CI](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/flyingsquirrel0419/linux-computer-use/actions/workflows/ci.yml) [![ライセンス](https://img.shields.io/github/license/flyingsquirrel0419/linux-computer-use)](LICENSE) [![Python](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fflyingsquirrel0419%2Flinux-computer-use%2Fmain%2Fpyproject.toml)](#要件)
 
 [English](README.md) | [한국어](README.ko.md) | **日本語** | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
-Linux 向けの computer use です。Claude Code と Codex が **X11 デスクトップ**を見て操作できるようにする MCP サーバー兼スキルで、スクリーンショット・マウス・キーボード・アクセシビリティツリーを扱います。エージェントは**専用の仮想ポインタとキーボード**を使うので、作業中もあなたのマウスとフォーカスはそのままです。
+Linux 向けの computer use です。Claude Code と Codex が **X11 デスクトップ**を見て操作できるようにする MCP サーバー兼スキルで、スクリーンショット・マウス・キーボード・アクセシビリティツリーを扱います。`xinput` で仮想デバイスを作成できる場合、エージェントは専用のポインタとキーボードを使います。操作前に `screen_info` で有効か確認してください。
 
 ![デモ: エージェントが専用のポインタとキーボードだけで、ターミナルからファイルマネージャーを開き、フォルダを作り、gedit で README.md を編集・保存し、git でコミットする](docs/demo.gif)
 
@@ -16,8 +16,8 @@ git clone https://github.com/flyingsquirrel0419/linux-computer-use ~/Documents/l
 claude mcp list                                 # → linux-cu: … run lcu-supervised - ✔ Connected
 ```
 
-- **追加バイナリ不要。** xdotool や scrot は使わず、純粋な Python で XTEST・X Input 2・AT-SPI を扱います。
-- **専用ポインタ。** エージェントごとに 2 つ目の X マスターポインタとキーボードを作ります。あなたのカーソルは動かず、フォーカス中のウィンドウも変わりません。
+- **xdotool・scrot は不要。** 入力と画面取得には Python を使い、専用ポインタには `xinput` が必要です。
+- **利用可能な場合は専用ポインタ。** エージェントごとに 2 つ目の X マスターポインタとキーボードを作ります。有効かどうかは `screen_info` で確認できます。
 - **ネイティブウィジェット。** `ui_tree` がボタンや入力欄を座標付きで一覧にし、`click_element` / `set_text` で直接操作します。
 - **Unicode 入力。** 韓国語・CJK・絵文字を入力できます。ibus のハングル入力が有効でも大丈夫です。
 - **Codex 風カーソル。** クリックを透過するオーバーレイが、Codex computer use と同じ形と動きでエージェントのポインタを描きます。
@@ -254,7 +254,7 @@ xinput remove-master "lcu-<pid> pointer"
 ## 安全性
 
 - エージェントは**実際のデスクトップ**を操作します。スキルの指針以外に組み込みの安全装置はありません。`default_tools_approval_mode = "approve"`(`install.sh --auto-approve` でのみ設定)のとき、Codex は確認せずにツールを呼び出します。
-- エージェントを隔離したい場合は、サーバーの環境に `DISPLAY=:99` を設定し、別のディスプレイ(ウィンドウマネージャーを動かした `Xvfb :99` など)で実行してください。
+- エージェントを隔離するには、サーバーと対象アプリを別のディスプレイ（例: `Xvfb :99`）と別の D-Bus セッション（`dbus-run-session`）で `DISPLAY=:99` に設定して実行してください。アクセシビリティツールは設定したディスプレイに属さないアプリを拒否します。
 - あなたの画面のスクリーンショットは、エージェントが使うモデルの提供元に送信されます。
 - 脆弱性は非公開で報告してください。[SECURITY.md](SECURITY.md) を参照してください。
 

@@ -71,19 +71,54 @@ print("on" if any(key.match(l) and '"approve"' in l for l in section) else "off"
 PY
 }
 
+codex_upgrade_server() {  # $1 = config path, $2 = checkout; print changed|unchanged
+  /usr/bin/python3 - "$1" "$2" <<'PY'
+import ast, json, os, re, shutil, sys
+path, root = sys.argv[1:]
+lines = open(path).read().splitlines(keepends=True)
+start = next(i for i, line in enumerate(lines) if line.strip() == "[mcp_servers.linux-cu]")
+end = next((i for i in range(start + 1, len(lines)) if lines[i].lstrip().startswith("[")), len(lines))
+old = re.compile(r'^(\s*args\s*=\s*)(\[.*\])(\s*(?:#.*)?\n?)$')
+changed = False
+owned = False
+for i in range(start + 1, end):
+    match = old.match(lines[i])
+    if not match:
+        continue
+    try:
+        args = ast.literal_eval(match.group(2))
+    except (SyntaxError, ValueError):
+        continue
+    if (isinstance(args, list) and len(args) >= 4 and args[:1] == ["--directory"]
+            and isinstance(args[1], str) and os.path.realpath(args[1]) == root):
+        owned = True
+    if owned and args[-2:] == ["run", "lcu"]:
+        args[-1] = "lcu-supervised"
+        lines[i] = match.group(1) + json.dumps(args) + match.group(3)
+        changed = True
+if changed:
+    shutil.copy2(path, path + ".bak-lcu")
+    open(path, "w").writelines(lines)
+print("changed" if changed else "unchanged" if owned else "foreign")
+PY
+}
+
 if command -v codex >/dev/null; then
   echo "==> Codex"
   CFG="$HOME/.codex/config.toml"
   mkdir -p "$(dirname "$CFG")"; touch "$CFG"
   if grep -q '^\[mcp_servers\.linux-cu\]' "$CFG"; then
-    if grep -q '"run", "lcu"\]' "$CFG"; then
-      cp "$CFG" "$CFG.bak-lcu"
-      sed -i 's/"run", "lcu"\]/"run", "lcu-supervised"]/' "$CFG"
+    upgrade=$(codex_upgrade_server "$CFG" "$ROOT")
+    if [ "$upgrade" = foreign ]; then
+      echo "    linux-cu points to another checkout; leaving it unchanged"
+    elif [ "$upgrade" = changed ]; then
       echo "    switched linux-cu to the supervisor (backup: $CFG.bak-lcu)"
     else
       echo "    MCP server linux-cu already in $CFG"
     fi
-    if [ -n "$APPROVE" ]; then
+    if [ "$upgrade" = foreign ]; then
+      :
+    elif [ -n "$APPROVE" ]; then
       cp "$CFG" "$CFG.bak-lcu"
       state=$(codex_approval "$CFG" "$APPROVE")
       echo "    auto-approve: $state (backup: $CFG.bak-lcu)"

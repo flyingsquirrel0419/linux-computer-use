@@ -5,6 +5,7 @@ can target "the Save button" instead of guessing pixels. Element ids are only
 valid until the next ui_tree() call.
 """
 
+import os
 import subprocess
 import sys
 import time
@@ -59,8 +60,36 @@ def _apps():
             app = desk.get_child_at_index(i)
         except Exception:
             continue
-        if app is not None:
+        if app is not None and _on_configured_display(app):
             yield app
+
+
+def _display_number(value: str) -> str:
+    """Treat :N and :N.screen as the same local X server."""
+    return value.split(".", 1)[0]
+
+
+def _process_display(pid: int) -> str | None:
+    with open(f"/proc/{pid}/environ", "rb") as proc_env:
+        values = proc_env.read().split(b"\0")
+    for item in values:
+        if item.startswith(b"DISPLAY="):
+            return item[8:].decode(errors="replace")
+    return None
+
+
+def _on_configured_display(acc) -> bool:
+    """Reject AT-SPI objects whose process is not on our X display."""
+    try:
+        app = acc.get_application() or acc
+        pid = app.get_process_id()
+        if pid <= 0:
+            return False
+        target = os.environ["DISPLAY"]
+        source = _process_display(pid)
+        return source is not None and _display_number(source) == _display_number(target)
+    except (OSError, AttributeError, TypeError, ValueError, KeyError):
+        return False
 
 
 def _safe(fn, default=None):
@@ -209,6 +238,8 @@ def get(eid: int):
     acc = _cache.get(eid)
     if acc is None:
         raise KeyError(f"unknown element id {eid}; call ui_tree again (ids reset on every call)")
+    if not _on_configured_display(acc):
+        raise RuntimeError("element no longer belongs to the configured X display")
     return acc
 
 
@@ -242,7 +273,6 @@ def set_text(eid: int, text: str) -> bool:
     acc = get(eid)
     if _safe(acc.get_editable_text_iface) is None:
         return False
-    _safe(lambda: Atspi.Component.grab_focus(acc))
     return bool(_safe(lambda: Atspi.EditableText.set_text_contents(acc, text), False))
 
 
